@@ -1,0 +1,5 @@
+.git
+logs
+stdout.log
+conf
+./lib/brc20_swap/data

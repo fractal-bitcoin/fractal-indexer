@@ -1,0 +1,15 @@
+# Address (required).
+# Currently supports both Redis Cluster and single-node Redis. A single address in addrs is treated as single-node.
+addrs: ["pika:6390"]
+
+# DB name (only required for single-node).
+database: 0
+
+# Password (optional).
+password: ""
+
+dialTimeout: "10s"
+readTimeout: "30s"
+writeTimeout: "30s"
+
+poolSize: 32

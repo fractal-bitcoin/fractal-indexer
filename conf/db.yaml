@@ -1,0 +1,24 @@
+# Address (required). Separate multiple values with commas.
+address: "clickhouse:19000"
+# DB name (required).
+database: "default"
+# Username (optional).
+username: ""
+# Password (optional).
+password: ""
+# Max idle connections (optional, 0).
+maxIdleConns: 10
+# Max open connections (optional, 0).
+maxOpenConns: 10
+# Max lifetime in minutes (optional, 0).
+connMaxLifetime: "10m"
+# execution timeout in seconds.
+max_execution_time: 3600
+# connection timeout in seconds.
+connection_timeout: 30
+# Read timeout in seconds.
+read_timeout: 10
+# Write timeout in seconds.
+write_timeout: 10
+# Debug enabled.
+debug: false

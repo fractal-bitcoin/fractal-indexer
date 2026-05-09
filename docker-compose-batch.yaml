@@ -1,0 +1,15 @@
+services:
+   fractal-indexer:
+     build: .
+     image: fractalbitcoin/fractal-indexer:v0.1
+     entrypoint: ./fractal-indexer -end 710000
+     volumes:
+       - ./conf:/data/conf:ro
+     labels:
+       - "name=fractal-indexer-batch"
+     logging:
+       driver: "json-file"
+       options:
+         labels: "name"
+         max-size: "1g"
+         max-file: "3"
