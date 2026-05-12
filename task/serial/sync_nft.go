@@ -3,6 +3,7 @@ package serial
 import (
 	"context"
 	"fmt"
+	"fractal-indexer/constant"
 	"fractal-indexer/logger"
 	"fractal-indexer/model"
 	scriptDecoder "fractal-indexer/parser/script"
@@ -75,6 +76,8 @@ func SyncBlockEvent(events []*model.NewInscriptionInfo) {
 			nfttype += 0x40
 		}
 
+		contentCode, contentBody := constant.EncodeNFTContentForDB(event.NFTData.ContentBody)
+
 		ins := store.EventInserter()
 		ins.Lock()
 		ins.PutFixedString(event.TxId, 32)
@@ -98,7 +101,8 @@ func SyncBlockEvent(events []*model.NewInscriptionInfo) {
 		ins.PutString(event.NFTData.ContentEncoding)
 		ins.PutString(event.NFTData.ContentType)
 		ins.PutUInt32(uint32(len(event.NFTData.ContentBody)))
-		ins.PutString(event.NFTData.ContentBody)
+		ins.PutUInt8(contentCode)
+		ins.PutString(contentBody)
 		ins.PutUInt32(nftheight)
 		ins.PutUInt64(uint64(eventIdx))
 		ins.PutUInt32(event.TxIdx)

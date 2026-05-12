@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS blkevent_height (
 
 	content_type String,
 	content_len  UInt32,
+	content_code UInt8,
 	content      String,
 	height       UInt32,
 	eventidx     UInt64,           -- event sequence within the block // fixme
