@@ -70,11 +70,13 @@ func GetInscriptionEventsCountByCreatePoint(nftPoint model.NFTCreatePoint) (coun
 func inscriptionEventResultSRF(rows *sql.Rows) (interface{}, error) {
 	var event model.InscriptionEventData
 	var ret model.NFTCreatePoint
+	var contentCode uint8
+	var contentBody string
 	err := rows.Scan(&ret.Height, &event.TxIdx, &event.Height, &ret.IdxInBlock, &event.InscriptionNumber, &event.Sequence, // position
 		&event.TxId, &event.Idx, // inscriptionId
 		&event.Vout,
 		&event.Offset,
-		&event.ContentType, &event.ContentBody, // content
+		&event.ContentType, &contentCode, &contentBody, // content
 		&event.Satoshi, &event.PkScript, // owner, and value
 		&event.PkScriptFrom, &event.InputIdx,
 		&event.BlockTime,  // block time
@@ -84,6 +86,8 @@ func inscriptionEventResultSRF(rows *sql.Rows) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	event.ContentBody = decodeNFTEventContent(contentCode, contentBody)
 
 	// sending transfer-function
 	if event.Height != 0 {
@@ -108,10 +112,10 @@ func GetInscriptionEventsByHeightRange(cursor, size, blkStartHeight, blkEndHeigh
 	}
 
 	psql := fmt.Sprintf(`
-SELECT height, txidx, nftheight, nftidx, nftnumber, sequence, txid, idx, vout, offset, content_type, content, satoshi, script_pk, script_pk_from, input_idx, blocktime, invalue, outvalue FROM blkevent_height
-WHERE %s
-ORDER BY height, eventidx
-LIMIT %d, %d
+	SELECT height, txidx, nftheight, nftidx, nftnumber, sequence, txid, idx, vout, offset, content_type, content_code, content, satoshi, script_pk, script_pk_from, input_idx, blocktime, invalue, outvalue FROM blkevent_height
+	WHERE %s
+	ORDER BY height, eventidx
+	LIMIT %d, %d
 `, whereExpr, cursor, size)
 
 	nftsRet, err := clickhouse.ScanAll(psql, inscriptionEventResultSRF)

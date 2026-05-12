@@ -19,13 +19,13 @@ WHERE
 `
 
 const sqlSelectInscriptionEvents = `
-SELECT
-	height, txidx, nftheight, nftidx,
-	nftnumber, sequence, txid, idx, vout,
-	offset, content_type, content, satoshi,
-	script_pk, script_pk_from, input_idx, blocktime, invalue, outvalue
-FROM
-	blkevent_height
+	SELECT
+		height, txidx, nftheight, nftidx,
+		nftnumber, sequence, txid, idx, vout,
+		offset, content_type, content_code, content, satoshi,
+		script_pk, script_pk_from, input_idx, blocktime, invalue, outvalue
+	FROM
+		blkevent_height
 WHERE
 	nftidx = %d
 	AND (

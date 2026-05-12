@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	queryConstant "fractal-query/constant"
 	"fractal-query/dao/clickhouse"
 	"fractal-query/dao/rdb"
 	scriptDecoder "fractal-query/lib/blkparser/script"
@@ -56,12 +57,14 @@ func inscriptionBRC20SwapResultSRF(rows *sql.Rows) (interface{}, error) {
 	brc20 := brc20swapIndexer.CacheContentBodyPool.Get().(*brc20swapModel.InscriptionBRC20Data)
 
 	var ret model.NFTCreatePoint
+	var contentCode uint8
+	var contentBody []byte
 	err := rows.Scan(&ret.Height, &brc20.TxIdx, &brc20.Height, &ret.IdxInBlock, &brc20.InscriptionNumber, // position
 		&brc20.TxId, &brc20.Idx, // inscriptionId
 		&brc20.Vout,
 		&brc20.Offset,
-		&brc20.Parent,                                                   // parent
-		&brc20.ContentBody,                                              // content
+		&brc20.Parent,              // parent
+		&contentCode, &contentBody, // content
 		&brc20.Satoshi, &brc20.PkScript, &brc20.TapScriptPk, &brc20.Fee, // owner, and value, fee
 		&brc20.BlockTime, // block time
 		&brc20.Sequence,
@@ -69,6 +72,11 @@ func inscriptionBRC20SwapResultSRF(rows *sql.Rows) (interface{}, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+	if decoded, ok := queryConstant.GetNFTContentByCode(contentCode); ok {
+		brc20.ContentBody = []byte(decoded)
+	} else {
+		brc20.ContentBody = contentBody
 	}
 
 	if len(brc20.TapScriptPk) == 35 &&
@@ -94,9 +102,9 @@ func getLatestBRC20SwapCreateIdxAndHeightRange(blkStartHeight, blkEndHeight int,
 	whereExpr := fmt.Sprintf("height >= %d AND height < %d", blkStartHeight, blkEndHeight)
 
 	psql := fmt.Sprintf(`
-SELECT height, txidx, nftheight, nftidx, nftnumber, txid, idx, vout, offset, parent, content, satoshi, script_pk, tapscript_pk, invalue-outvalue, blocktime, sequence, nfttype FROM blkevent_height
-WHERE %s AND (nfttype = 3 OR
-             (height >= %d AND nfttype = 67) OR
+	SELECT height, txidx, nftheight, nftidx, nftnumber, txid, idx, vout, offset, parent, content_code, content, satoshi, script_pk, tapscript_pk, invalue-outvalue, blocktime, sequence, nfttype FROM blkevent_height
+	WHERE %s AND (nfttype = 3 OR
+	             (height >= %d AND nfttype = 67) OR
              (height >= %d AND nfttype = 67 AND height < %d AND (nftflag = 0 OR bitAnd(nftflag, 0x40) = 0x40 OR substr(tapscript_pk, 35, 1) > unhex('00'))))
 ORDER BY height, eventidx
 `, whereExpr,

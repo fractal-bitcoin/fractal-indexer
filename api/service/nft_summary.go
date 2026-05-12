@@ -14,16 +14,19 @@ import (
 
 func inscriptionContentResultSRF(rows *sql.Rows) (interface{}, error) {
 	var ret model.NFTCreatePoint
-	err := rows.Scan(&ret.Height, &ret.IdxInBlock, &ret.ContentType, &ret.Content)
+	var contentCode uint8
+	var content string
+	err := rows.Scan(&ret.Height, &ret.IdxInBlock, &ret.ContentType, &contentCode, &content)
 	if err != nil {
 		return nil, err
 	}
+	ret.Content = []byte(decodeNFTContent(contentCode, content))
 	return &ret, nil
 }
 
 func GetNFTContentByCreateIdx(blkHeight, nftIdx int) (contentType, content string, err error) {
 	psql := fmt.Sprintf(`
-SELECT height, nftidx, content_type, content FROM blknft_height
+SELECT height, nftidx, content_type, content_code, content FROM blknft_height
 WHERE height = %d AND nftidx = %d
 LIMIT 1
 `, blkHeight, nftIdx)
@@ -47,7 +50,7 @@ func GetLatestNFTCreateIdxAndContentBySummaryTypeAndHeightRange(blkStartHeight, 
 	}
 
 	psql := fmt.Sprintf(`
-SELECT height, nftidx, '', content FROM blknft_height
+SELECT height, nftidx, '', content_code, content FROM blknft_height
 WHERE %s AND nfttype != 0 AND nfttype != 64 AND nfttype != 128
 ORDER BY height DESC, nftidx DESC
 LIMIT %d

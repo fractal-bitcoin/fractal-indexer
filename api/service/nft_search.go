@@ -56,11 +56,14 @@ func inscriptionSearchResultSRF(rows *sql.Rows) (interface{}, error) {
 
 	var txId string
 	var idx uint32
-	err := rows.Scan(&ret.Height, &ret.IdxInBlock, &txId, &idx, &content.InscriptionNumber, &content.ContentType, &content.ContentBody, &content.Satoshi)
+	var contentCode uint8
+	var contentBody string
+	err := rows.Scan(&ret.Height, &ret.IdxInBlock, &txId, &idx, &content.InscriptionNumber, &content.ContentType, &contentCode, &contentBody, &content.Satoshi)
 	if err != nil {
 		return nil, err
 	}
 
+	content.ContentBody = decodeNFTContent(contentCode, contentBody)
 	content.InscriptionId = fmt.Sprintf("%si%d", utils.GetReversedStringHex(txId), idx)
 	content.InscriptionNumber = content.InscriptionNumber
 	content.Height = ret.Height
@@ -75,7 +78,7 @@ func GetLatestNFTCreateIdxAndHeightRange(blkStartHeight, blkEndHeight int) (nfts
 	}
 
 	psql := fmt.Sprintf(`
-SELECT height, nftidx, txid, idx, nftnumber, content_type, content, satoshi FROM blknft_height
+SELECT height, nftidx, txid, idx, nftnumber, content_type, content_code, content, satoshi FROM blknft_height
 WHERE %s AND content_len < 102400 AND (nfttype = 1 OR nfttype = 65 OR nfttype = 129)
 ORDER BY height, nftidx
 `, whereExpr)
@@ -101,9 +104,9 @@ func GetLatestNFTCreateIdxAndHeight(blkStartHeight, blkEndHeight int) <-chan int
 	go func() {
 		defer close(out)
 
-		const sqlStr = `SELECT height, nftidx, txid, idx, nftnumber, content_type, content, satoshi FROM blknft_height
+		const sqlStr = `SELECT height, nftidx, txid, idx, nftnumber, content_type, content_code, content, satoshi FROM blknft_height
 WHERE height >= %d AND height < %d AND content_len < 102400 AND (nfttype = 1 OR nfttype = 65 OR nfttype = 129)
-ORDER BY height, nftidx`
+	ORDER BY height, nftidx`
 		if blkStartHeight < 0 || blkEndHeight < 0 || blkStartHeight > blkEndHeight {
 			logger.Log.Warn("invalid height range", zap.Int("startHeight", blkStartHeight), zap.Int("endHeight", blkEndHeight))
 			return
