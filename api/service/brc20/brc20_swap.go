@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	queryConstant "fractal-indexer/api/constant"
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/dao/rdb"
 	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
@@ -14,6 +13,9 @@ import (
 	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
+	indexerConstant "fractal-indexer/constant"
+	mtx "fractal-indexer/lib/midware"
+	"fractal-indexer/logger"
 	"os"
 	"sort"
 	"strings"
@@ -73,7 +75,7 @@ func inscriptionBRC20SwapResultSRF(rows *sql.Rows) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if decoded, ok := queryConstant.GetNFTContentByCode(contentCode); ok {
+	if decoded, ok := indexerConstant.GetNFTContentByCode(contentCode); ok {
 		brc20.ContentBody = []byte(decoded)
 	} else {
 		brc20.ContentBody = contentBody
