@@ -1,7 +1,7 @@
 package model
 
 import (
-	"fractal-query/constant"
+	"fractal-indexer/api/constant"
 	"regexp"
 	"sync"
 
@@ -38,6 +38,16 @@ var GlobalDomainNamesCategoryToIndexMap map[string]int = map[string]int{
 	SEARCH_TYPE_INFINITYAI: NAME_TYPE_INFINITYAI,
 	SEARCE_TYPE_ALL:        NAME_TYPE_ALL,
 }
+
+var (
+	GlobalInscriptions                           []*InscriptionContentForSearch
+	GlobalInscriptionsGroupByFBDomainCategory    []*InscriptionContentForSearch
+	GlobalInscriptionsGroupByNumberCategory      []*InscriptionContentForSearch
+	GlobalInscriptionsGroupByWordCategory        []*InscriptionContentForSearch
+	GlobalInscriptionsGroupByInfinityAICategory  []*InscriptionContentForSearch
+	GlobalInscriptionsGroupByBRC20Category       []*InscriptionContentForSearch
+	GlobalInscriptionsGroupBySubTextCategoryList []*SearchTypeAndInscriptionContentForSearch
+)
 
 func NFTNumberFix(number uint64) (fixedNumber int64) {
 	// return NFTNumberSkipFix(number)

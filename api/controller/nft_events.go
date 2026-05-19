@@ -1,11 +1,11 @@
 package controller
 
 import (
-	"fractal-query/lib/utils"
-	"fractal-query/logger"
-	"fractal-query/model"
-	"fractal-query/service"
-	serviceNFT "fractal-query/service/nft"
+	"fractal-indexer/api/lib/utils"
+	"fractal-indexer/api/logger"
+	"fractal-indexer/api/model"
+	"fractal-indexer/api/service"
+	serviceNFT "fractal-indexer/api/service/nft"
 	"net/http"
 	"strconv"
 

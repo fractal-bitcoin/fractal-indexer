@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"fractal-query/dao/clickhouse"
-	"fractal-query/logger"
-	"fractal-query/model"
+	"fractal-indexer/api/dao/clickhouse"
+	"fractal-indexer/api/logger"
+	"fractal-indexer/api/model"
 	"strings"
 
 	"go.uber.org/zap"

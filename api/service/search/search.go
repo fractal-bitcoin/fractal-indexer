@@ -1,8 +1,8 @@
 package search
 
 import (
-	"fractal-query/logger"
-	"fractal-query/model"
+	"fractal-indexer/api/logger"
+	"fractal-indexer/api/model"
 	"strings"
 
 	"go.uber.org/zap"

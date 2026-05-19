@@ -1,6 +1,6 @@
 package model
 
-import scriptDecoder "fractal-query/lib/blkparser/script"
+import scriptDecoder "fractal-indexer/api/lib/blkparser/script"
 
 type Tx struct {
 	Raw          []byte

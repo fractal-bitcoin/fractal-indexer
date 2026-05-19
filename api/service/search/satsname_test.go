@@ -1,7 +1,7 @@
 package search_test
 
 import (
-	"fractal-query/constant"
+	"fractal-indexer/api/constant"
 	"strings"
 	"testing"
 )
@@ -38,16 +38,17 @@ func TestSatsNames(t *testing.T) {
 		want  string
 		err   bool
 	}{
-		{"bob.sats", "bob.sats", false},
-		{"Bob.sats", "bob.sats", false},
-		{"bob.SATS", "bob.sats", false},
-		{"bob.sats ", "bob.sats", false},
-		{"bob.sats\n", "bob.sats", false},
-		{" bob.sats", "bob.sats", true},
-		{"\nbob.sats", "bob.sats", true},
-		{"bo b.sats", "bob.sats", true},
-		{"bo.b.sats", "bob.sats", true},
-		{"😄bob.sats", "😄bob.sats", false},
+		{"bob.fb", "bob.fb", false},
+		{"Bob.fb", "bob.fb", false},
+		{"bob.FB", "bob.fb", false},
+		{"bob.fb ", "bob.fb", false},
+		{"bob.fb\n", "bob.fb", false},
+		{" bob.fb", "bob.fb", true},
+		{"\nbob.fb", "bob.fb", true},
+		{"bo b.fb", "bob.fb", true},
+		{"bo.b.fb", "bob.fb", true},
+		{"😄bob.fb", "😄bob.fb", false},
+		{"bob.sats", "bob.sats", true},
 	}
 
 	for _, tc := range testCases {

@@ -3,7 +3,7 @@ package utils
 import (
 	"encoding/hex"
 	"errors"
-	scriptDecoder "fractal-query/lib/blkparser/script"
+	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
 	"math/rand"
 	"os"
 	"strings"

@@ -3,8 +3,8 @@ package model
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fractal-query/constant"
-	scriptDecoder "fractal-query/lib/blkparser/script"
+	"fractal-indexer/api/constant"
+	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
 
 	"github.com/golang/snappy"
 )

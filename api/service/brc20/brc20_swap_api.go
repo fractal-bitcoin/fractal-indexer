@@ -3,9 +3,9 @@ package brc20
 import (
 	"encoding/hex"
 	"errors"
-	"fractal-query/lib/utils"
-	"fractal-query/logger"
-	"fractal-query/model"
+	"fractal-indexer/api/lib/utils"
+	"fractal-indexer/api/logger"
+	"fractal-indexer/api/model"
 	"strings"
 
 	"github.com/unisat-wallet/libbrc20-indexer/conf"

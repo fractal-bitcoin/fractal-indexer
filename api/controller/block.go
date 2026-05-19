@@ -2,10 +2,10 @@ package controller
 
 import (
 	"encoding/hex"
-	"fractal-query/lib/utils"
-	"fractal-query/logger"
-	"fractal-query/model"
-	"fractal-query/service"
+	"fractal-indexer/api/lib/utils"
+	"fractal-indexer/api/logger"
+	"fractal-indexer/api/model"
+	"fractal-indexer/api/service"
 	"net/http"
 	"strconv"
 

@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"fractal-query/logger"
-	"fractal-query/model"
-	"fractal-query/service"
+	"fractal-indexer/api/logger"
+	"fractal-indexer/api/model"
+	"fractal-indexer/api/service"
 	"net/http"
 	"os"
 

@@ -1,7 +1,7 @@
 package constant
 
 import (
-	"fractal-query/logger"
+	"fractal-indexer/api/logger"
 	"os"
 	"strconv"
 

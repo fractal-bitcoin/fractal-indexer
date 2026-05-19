@@ -2,12 +2,17 @@ package search_test
 
 import (
 	"fmt"
-	"fractal-query/model"
-	"fractal-query/service/search"
+	"fractal-indexer/api/logger"
+	"fractal-indexer/api/model"
+	"fractal-indexer/api/service/search"
 	"testing"
+
+	"go.uber.org/zap"
 )
 
 func init() {
+	logger.Log = zap.NewNop()
+
 	var nfts []*model.InscriptionContentForSearch
 	n := 10000
 	nfts = make([]*model.InscriptionContentForSearch, n)
@@ -20,7 +25,7 @@ func init() {
 			Index:             0,
 			ContentType:       "",
 			ContentBody:       "",
-			CreateIdxKey:      "",
+			CreateIdxKey:      0,
 			InscriptionNumber: 1,
 			Height:            0, // Height of NFT show in block onCreate
 			Address:           "",

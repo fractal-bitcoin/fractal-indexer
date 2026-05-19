@@ -2,7 +2,7 @@ package blkparser
 
 import (
 	"encoding/binary"
-	"fractal-query/model"
+	"fractal-indexer/api/model"
 )
 
 func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {

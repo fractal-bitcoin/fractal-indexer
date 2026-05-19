@@ -1,6 +1,6 @@
 package events
 
-import "fractal-query/constant"
+import "fractal-indexer/api/constant"
 
 func decodeNFTEventContent(contentCode uint8, content string) string {
 	if decoded, ok := constant.GetNFTContentByCode(contentCode); ok {

@@ -10,7 +10,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/vincent-petithory/dataurl"
+	"fractal-indexer/api/lib/dataurl"
 )
 
 var (

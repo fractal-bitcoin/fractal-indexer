@@ -8,7 +8,6 @@ RUN apk add --no-cache build-base util-linux-dev
 WORKDIR /usr/local/build/
 COPY ./go.mod .
 COPY ./go.sum .
-COPY ./api/go.mod ./api/
 COPY ./api/lib/brc20_swap/go.mod ./api/lib/brc20_swap/
 RUN GOOS=${GO_OS} GOARCH=${GO_ARCH} go mod download
 

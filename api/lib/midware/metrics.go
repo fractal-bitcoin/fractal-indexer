@@ -2,7 +2,7 @@ package midware
 
 import (
 	"fmt"
-	"fractal-query/logger"
+	"fractal-indexer/api/logger"
 	"runtime"
 	"strings"
 	"sync"
