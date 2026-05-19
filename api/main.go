@@ -94,21 +94,25 @@ func initConfig() {
 	if ticks := os.Getenv("TICKS_ENABLED"); ticks != "" {
 		conf.TICKS_ENABLED = ticks
 	}
-	if id := os.Getenv("MODULE_SWAP_SOURCE_INSCRIPTION_ID"); id != "" {
-		conf.MODULE_SWAP_SOURCE_INSCRIPTION_ID = id
+	if prune := os.Getenv("BRC20_PRUNE_MINT_HISTORY"); prune != "" {
+		if enabled, err := strconv.ParseBool(prune); err == nil {
+			conf.PruneBRC20MintHistory = enabled
+		}
 	}
-	if id := os.Getenv("MODULE_SWAP_INSCRIPTION_ID"); id != "" {
-		conf.MODULE_SWAP_INSCRIPTION_ID = id
+	if prune := os.Getenv("BRC20_PRUNE_HISTORY_LIST"); prune != "" {
+		if enabled, err := strconv.ParseBool(prune); err == nil {
+			conf.PruneHistoryList = enabled
+		}
 	}
-	if prune := os.Getenv("BRC20_PRUNE_MINT_HISTORY"); prune == "true" {
-		conf.PruneBRC20MintHistory = true
+	if prune := os.Getenv("BRC20_PRUNE_VALID_DATA_MAP"); prune != "" {
+		if enabled, err := strconv.ParseBool(prune); err == nil {
+			conf.PruneValidBRC20DataMap = enabled
+		}
 	}
-	if prune := os.Getenv("BRC20_PRUNE_HISTORY_LIST"); prune == "true" {
-		conf.PruneHistoryList = true
+	if conf.PruneHistoryList {
 		logger.Log.Info("BRC20_PRUNE_HISTORY_LIST enabled - history slices will not be populated")
 	}
-	if prune := os.Getenv("BRC20_PRUNE_VALID_DATA_MAP"); prune == "true" {
-		conf.PruneValidBRC20DataMap = true
+	if conf.PruneValidBRC20DataMap {
 		logger.Log.Info("BRC20_PRUNE_VALID_DATA_MAP enabled - InscriptionsValidBRC20DataMap will not be populated")
 	}
 
