@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"strings"
 
 	"github.com/unisat-wallet/libbrc20-indexer/conf"

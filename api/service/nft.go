@@ -8,10 +8,10 @@ import (
 	"fractal-indexer/api/constant"
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/dao/rdb"
-	mtx "fractal-indexer/api/lib/midware"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	mtx "fractal-indexer/lib/midware"
+	"fractal-indexer/logger"
 	"sort"
 
 	redis "github.com/go-redis/redis/v8"

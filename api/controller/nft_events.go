@@ -2,10 +2,10 @@ package controller
 
 import (
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
 	serviceNFT "fractal-indexer/api/service/nft"
+	"fractal-indexer/logger"
 	"net/http"
 	"strconv"
 

@@ -47,14 +47,12 @@
   - `api/lib/midware/handler.go`
   - `lib/midware/metrics.go`
   - `api/lib/midware/metrics.go`
-- 当前状态：同源复制后 API 侧已有额外行为和注释差异。
-- API 侧额外内容：
-  - `api/lib/midware/sign.go`
-  - `api/lib/midware/metrics.go` 增加了 `memory_heap_inuse`、metric item 超限时 logger/zap 记录、`ReportError`、`ErrorType`。
-- 建议合并方式：
-  - 将通用 metrics core 移到共享包。
-  - API 专属的 error reporting / sign middleware 保留在 API 包，或做 thin wrapper。
-  - 需要决定 indexer 是否也应获得 API 侧的超限日志和 `memory_heap_inuse` 指标。
+- 当前状态：已完成。
+- 完成方式：
+  - API 改为直接使用 root `lib/midware`。
+  - API 侧 metrics 增量已合入 root `lib/midware`：`memory_heap_inuse`、metric item 超限日志、`ReportError`、`ErrorType`。
+  - 删除 `api/lib/midware/handler.go` 和 `api/lib/midware/metrics.go` 重复实现。
+  - `api/lib/midware/sign.go` 保留在 API 包。
 
 ## 优先级 2：同领域但已经分叉
 
@@ -63,15 +61,11 @@
 - 重复文件：
   - `logger/logger.go`
   - `api/logger/logger.go`
-- 当前状态：几乎相同，但生命周期不同。
-- 关键差异：
-  - root logger 通过 `init()` 自动初始化。
-  - API logger 暴露 `Init()`，由 `api.Run()` 调用。
-- 建议合并方式：
-  - 抽出共享构造函数，例如 `NewLoggerFromEnv()`。
-  - root/API 保留各自生命周期 wrapper。
-- 风险：
-  - 改动 root 隐式初始化可能影响命令启动顺序。
+- 当前状态：已完成。
+- 完成方式：
+  - API 改为直接使用 root `logger`。
+  - root `logger` 增加 `Init()`，同时保留 `init()` 自动初始化。
+  - 删除 `api/logger` 重复实现和重复测试。
 
 ### Redis 初始化
 

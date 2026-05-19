@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"fractal-indexer/api/constant"
 	"fractal-indexer/api/dao/clickhouse"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"sync"
 
 	"go.uber.org/zap"

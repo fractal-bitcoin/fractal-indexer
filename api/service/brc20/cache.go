@@ -1,8 +1,8 @@
 package brc20
 
 import (
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"sort"
 	"strings"
 	"time"

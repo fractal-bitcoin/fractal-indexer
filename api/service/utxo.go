@@ -9,10 +9,10 @@ import (
 	"fractal-indexer/api/dao/rdb"
 	"fractal-indexer/api/lib/blkparser"
 	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
-	mtx "fractal-indexer/api/lib/midware"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	mtx "fractal-indexer/lib/midware"
+	"fractal-indexer/logger"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"

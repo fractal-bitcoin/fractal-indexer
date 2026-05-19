@@ -1,8 +1,8 @@
 package service
 
 import (
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"sort"
 
 	brc20Model "github.com/unisat-wallet/libbrc20-indexer/model"

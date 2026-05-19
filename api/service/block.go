@@ -8,8 +8,8 @@ import (
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/dao/rdb"
 	"fractal-indexer/api/lib/blkparser"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 
 	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"

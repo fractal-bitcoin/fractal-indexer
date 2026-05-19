@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"sort"
 	"strings"
 
