@@ -1,10 +1,6 @@
 package model
 
-import (
-	"encoding/binary"
-
-	scriptDecoder "github.com/unisat-wallet/libbrc20-indexer/utils/script"
-)
+import "encoding/binary"
 
 type BRC20HistoryBase struct {
 	Type  uint8 // inscribe-deploy/inscribe-mint/inscribe-transfer/transfer/send/receive
@@ -94,197 +90,95 @@ func NewBRC20History(historyType uint8, isValid bool, isTransfer bool,
 	return history
 }
 
+func appendFixedString(buf []byte, value string, size int) []byte {
+	offset := len(buf)
+	buf = append(buf, make([]byte, size)...)
+	copy(buf[offset:], value)
+	return buf
+}
+
+func appendUint32(buf []byte, value uint32) []byte {
+	var raw [4]byte
+	binary.LittleEndian.PutUint32(raw[:], value)
+	return append(buf, raw[:]...)
+}
+
+func appendUint64(buf []byte, value uint64) []byte {
+	var raw [8]byte
+	binary.LittleEndian.PutUint64(raw[:], value)
+	return append(buf, raw[:]...)
+}
+
+func appendInt64(buf []byte, value int64) []byte {
+	return appendUint64(buf, uint64(value))
+}
+
+func appendBytes(buf []byte, value string) []byte {
+	buf = appendUint32(buf, uint32(len(value)))
+	return append(buf, value...)
+}
+
+func appendStringWithLimit(buf []byte, value string, limit int) []byte {
+	n := len(value)
+	if n < limit {
+		buf = append(buf, uint8(n))
+		return append(buf, value...)
+	}
+	return append(buf, 0)
+}
+
 func (h *BRC20History) Marshal() (result []byte) {
-	var buf [1024]byte
-
-	// type
-	buf[0] = h.Type
-	// valid
+	buf := make([]byte, 0, 1024)
+	buf = append(buf, h.Type)
 	if h.Valid {
-		buf[1] = 1
+		buf = append(buf, 1)
 	} else {
-		buf[1] = 0
+		buf = append(buf, 0)
 	}
-	// txid
-	copy(buf[2:2+32], h.TxId[:])
+	buf = appendFixedString(buf, h.TxId, 32)
 
-	offset := 34
+	buf = appendUint32(buf, h.Idx)
+	buf = appendUint32(buf, h.Vout)
+	buf = appendUint64(buf, h.Offset)
+	buf = appendBytes(buf, h.PkScriptFrom)
+	buf = appendBytes(buf, h.PkScriptTo)
+	buf = appendUint64(buf, h.Satoshi)
+	buf = appendInt64(buf, h.Fee)
+	buf = appendUint32(buf, h.Height)
+	buf = appendUint32(buf, h.TxIdx)
+	buf = appendUint32(buf, h.BlockTime)
 
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Idx))
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Vout))
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Offset))
+	buf = appendStringWithLimit(buf, h.Amount, 40)
+	buf = appendStringWithLimit(buf, h.OverallBalance, 40)
+	buf = appendStringWithLimit(buf, h.TransferableBalance, 40)
+	buf = appendStringWithLimit(buf, h.AvailableBalance, 40)
 
-	offset += scriptDecoder.PutCompressedScript(buf[offset:], []byte(h.PkScriptFrom))
-	offset += scriptDecoder.PutCompressedScript(buf[offset:], []byte(h.PkScriptTo))
+	buf = appendUint32(buf, h.Inscription.Height)
+	buf = appendInt64(buf, h.Inscription.InscriptionNumber)
+	buf = appendUint64(buf, h.Inscription.Satoshi)
+	buf = appendUint32(buf, h.Inscription.Idx)
+	buf = appendStringWithLimit(buf, h.Inscription.TxId, 70)
 
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Satoshi))
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Fee))
-
-	binary.LittleEndian.PutUint32(buf[offset:], h.Height) // 4
-	offset += 4
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.TxIdx))
-	binary.LittleEndian.PutUint32(buf[offset:], h.BlockTime) // 4
-	offset += 4
-
-	// Amount
-	n := len(h.Amount)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], h.Amount[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-
-	// OverallBalance
-	n = len(h.OverallBalance)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], h.OverallBalance[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-
-	// TransferableBalance
-	n = len(h.TransferableBalance)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], h.TransferableBalance[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-
-	// AvailableBalance
-	n = len(h.AvailableBalance)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], h.AvailableBalance[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-
-	// Inscription
-	binary.LittleEndian.PutUint32(buf[offset:], h.Inscription.Height) // 4
-	offset += 4
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Inscription.InscriptionNumber))
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Inscription.Satoshi))
-
-	// inscriptionId
-	offset += scriptDecoder.PutVLQ(buf[offset:], uint64(h.Inscription.Idx))
-	n = len(h.Inscription.TxId)
-	if n < 70 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], h.Inscription.TxId[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-
-	// data
 	data := h.Inscription.Data
 	if data == nil {
-		result = make([]byte, offset)
-		copy(result, buf[:offset])
-		return result
+		return buf
 	}
 
-	// BRC20Tick
-	n = len(data.BRC20Tick)
-	if n < 16 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], data.BRC20Tick[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-
-	// BRC20Max
-	n = len(data.BRC20Max)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], data.BRC20Max[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-	// BRC20Limit
-	n = len(data.BRC20Limit)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], data.BRC20Limit[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-	// BRC20Amount
-	n = len(data.BRC20Amount)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], data.BRC20Amount[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-	// BRC20Decimal
-	n = len(data.BRC20Decimal)
-	if n < 8 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], data.BRC20Decimal[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-	// BRC20Minted
-	n = len(data.BRC20Minted)
-	if n < 40 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], data.BRC20Minted[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-	// BRC20SelfMint
-	n = len(data.BRC20SelfMint)
-	if n < 8 {
-		buf[offset] = uint8(n)
-		offset += 1
-		copy(buf[offset:offset+n], data.BRC20SelfMint[:])
-		offset += n
-	} else {
-		buf[offset] = 0
-		offset += 1
-	}
-	result = make([]byte, offset)
-	copy(result, buf[:offset])
-	return result
+	buf = appendStringWithLimit(buf, data.BRC20Tick, 16)
+	buf = appendStringWithLimit(buf, data.BRC20Max, 40)
+	buf = appendStringWithLimit(buf, data.BRC20Limit, 40)
+	buf = appendStringWithLimit(buf, data.BRC20Amount, 40)
+	buf = appendStringWithLimit(buf, data.BRC20Decimal, 8)
+	buf = appendStringWithLimit(buf, data.BRC20Minted, 40)
+	buf = appendStringWithLimit(buf, data.BRC20SelfMint, 8)
+	return buf
 }
 
 func (h *BRC20History) Unmarshal(buf []byte) {
+	if len(buf) < 34 {
+		return
+	}
+
 	h.Type = buf[0]
 	h.Valid = (buf[1] == 1)
 
@@ -292,195 +186,136 @@ func (h *BRC20History) Unmarshal(buf []byte) {
 
 	offset := 34
 
-	idx, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
-		return
+	readUint32 := func() (uint32, bool) {
+		if len(buf[offset:]) < 4 {
+			return 0, false
+		}
+		value := binary.LittleEndian.Uint32(buf[offset:])
+		offset += 4
+		return value, true
 	}
-	h.Idx = uint32(idx)
-	offset += bytesRead
-
-	vout, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
-		return
+	readUint64 := func() (uint64, bool) {
+		if len(buf[offset:]) < 8 {
+			return 0, false
+		}
+		value := binary.LittleEndian.Uint64(buf[offset:])
+		offset += 8
+		return value, true
 	}
-	h.Vout = uint32(vout)
-	offset += bytesRead
-
-	nftOffset, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
-		return
+	readInt64 := func() (int64, bool) {
+		value, ok := readUint64()
+		return int64(value), ok
 	}
-	h.Offset = nftOffset
-	offset += bytesRead
-
-	// Decode the compressed script size and ensure there are enough bytes
-	// left in the slice for it.
-	scriptSize := scriptDecoder.DecodeCompressedScriptSize(buf[offset:])
-	if len(buf[offset:]) < scriptSize {
-		return
+	readBytes := func() (string, bool) {
+		n, ok := readUint32()
+		if !ok {
+			return "", false
+		}
+		if uint64(len(buf[offset:])) < uint64(n) {
+			return "", false
+		}
+		value := string(buf[offset : offset+int(n)])
+		offset += int(n)
+		return value, true
 	}
-	h.PkScriptFrom = string(scriptDecoder.DecompressScript(buf[offset : offset+scriptSize]))
-	offset += scriptSize
-
-	scriptSize = scriptDecoder.DecodeCompressedScriptSize(buf[offset:])
-	if len(buf[offset:]) < scriptSize {
-		return
-	}
-	h.PkScriptTo = string(scriptDecoder.DecompressScript(buf[offset : offset+scriptSize]))
-	offset += scriptSize
-
-	satoshi, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
-		return
-	}
-	h.Satoshi = satoshi
-	offset += bytesRead
-
-	fee, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
-		return
-	}
-	h.Fee = int64(fee)
-	offset += bytesRead
-
-	h.Height = binary.LittleEndian.Uint32(buf[offset:]) // 4
-	offset += 4
-
-	txidx, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
-		return
-	}
-	h.TxIdx = uint32(txidx)
-	offset += bytesRead
-
-	h.BlockTime = binary.LittleEndian.Uint32(buf[offset:]) // 4
-	offset += 4
-
-	// Amount
-	n := int(buf[offset])
-	offset += 1
-	if n > 0 {
-		h.Amount = string(buf[offset : offset+n])
+	readStringWithLimit := func() (string, bool) {
+		if len(buf[offset:]) < 1 {
+			return "", false
+		}
+		n := int(buf[offset])
+		offset += 1
+		if len(buf[offset:]) < n {
+			return "", false
+		}
+		value := string(buf[offset : offset+n])
 		offset += n
+		return value, true
 	}
 
-	// OverallBalance
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		h.OverallBalance = string(buf[offset : offset+n])
-		offset += n
-	}
-
-	// TransferableBalance
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		h.TransferableBalance = string(buf[offset : offset+n])
-		offset += n
-	}
-
-	// AvailableBalance
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		h.AvailableBalance = string(buf[offset : offset+n])
-		offset += n
-	}
-
-	// Inscription
-	h.Inscription.Height = binary.LittleEndian.Uint32(buf[offset:]) // 4
-	offset += 4
-
-	number, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
+	var ok bool
+	if h.Idx, ok = readUint32(); !ok {
 		return
 	}
-	h.Inscription.InscriptionNumber = int64(number)
-	offset += bytesRead
-
-	nftSatoshi, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
+	if h.Vout, ok = readUint32(); !ok {
 		return
 	}
-	h.Inscription.Satoshi = nftSatoshi
-	offset += bytesRead
-
-	nftIdx, bytesRead := scriptDecoder.DeserializeVLQ(buf[offset:])
-	if bytesRead >= len(buf[offset:]) {
+	if h.Offset, ok = readUint64(); !ok {
 		return
 	}
-	h.Inscription.Idx = uint32(nftIdx)
-	offset += bytesRead
-
-	// inscriptionId
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		h.Inscription.TxId = string(buf[offset : offset+n])
-		offset += n
+	if h.PkScriptFrom, ok = readBytes(); !ok {
+		return
+	}
+	if h.PkScriptTo, ok = readBytes(); !ok {
+		return
+	}
+	if h.Satoshi, ok = readUint64(); !ok {
+		return
+	}
+	if h.Fee, ok = readInt64(); !ok {
+		return
+	}
+	if h.Height, ok = readUint32(); !ok {
+		return
+	}
+	if h.TxIdx, ok = readUint32(); !ok {
+		return
+	}
+	if h.BlockTime, ok = readUint32(); !ok {
+		return
+	}
+	if h.Amount, ok = readStringWithLimit(); !ok {
+		return
+	}
+	if h.OverallBalance, ok = readStringWithLimit(); !ok {
+		return
+	}
+	if h.TransferableBalance, ok = readStringWithLimit(); !ok {
+		return
+	}
+	if h.AvailableBalance, ok = readStringWithLimit(); !ok {
+		return
+	}
+	if h.Inscription.Height, ok = readUint32(); !ok {
+		return
+	}
+	if h.Inscription.InscriptionNumber, ok = readInt64(); !ok {
+		return
+	}
+	if h.Inscription.Satoshi, ok = readUint64(); !ok {
+		return
+	}
+	if h.Inscription.Idx, ok = readUint32(); !ok {
+		return
+	}
+	if h.Inscription.TxId, ok = readStringWithLimit(); !ok {
+		return
 	}
 
-	// data
 	if len(buf[offset:]) == 0 {
 		return
 	}
 	data := &InscriptionBRC20InfoResp{}
 	h.Inscription.Data = data
 
-	// BRC20Tick
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		data.BRC20Tick = string(buf[offset : offset+n])
-		offset += n
+	if data.BRC20Tick, ok = readStringWithLimit(); !ok {
+		return
 	}
-
-	// BRC20Max
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		data.BRC20Max = string(buf[offset : offset+n])
-		offset += n
+	if data.BRC20Max, ok = readStringWithLimit(); !ok {
+		return
 	}
-
-	// BRC20Limit
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		data.BRC20Limit = string(buf[offset : offset+n])
-		offset += n
+	if data.BRC20Limit, ok = readStringWithLimit(); !ok {
+		return
 	}
-
-	// BRC20Amount
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		data.BRC20Amount = string(buf[offset : offset+n])
-		offset += n
+	if data.BRC20Amount, ok = readStringWithLimit(); !ok {
+		return
 	}
-
-	// BRC20Decimal
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		data.BRC20Decimal = string(buf[offset : offset+n])
-		offset += n
+	if data.BRC20Decimal, ok = readStringWithLimit(); !ok {
+		return
 	}
-
-	// BRC20Minted
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		data.BRC20Minted = string(buf[offset : offset+n])
-		offset += n
+	if data.BRC20Minted, ok = readStringWithLimit(); !ok {
+		return
 	}
-
-	// BRC20SelfMint
-	n = int(buf[offset])
-	offset += 1
-	if n > 0 {
-		data.BRC20SelfMint = string(buf[offset : offset+n])
-		offset += n
+	if data.BRC20SelfMint, ok = readStringWithLimit(); !ok {
+		return
 	}
 }

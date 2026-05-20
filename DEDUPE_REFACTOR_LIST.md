@@ -37,9 +37,9 @@
 - 完成方式：
   - root `parser/script` 的 compression 导出面无当前仓库生产调用点，已删除 `parser/script/compress.go` 和 `parser/script/compress_test.go`。
   - `api/lib/blkparser/script/compress.go` 只有 root `parser/script` 的简单封装，且 API 侧无调用点，已删除。
-  - `api/lib/brc20_swap` 是独立 module，`utils/script/compress.go` 仍有生产调用；对应 btcsuite compression/VLQ 函数在 `blockchain` 包内未导出，无法通过正常 import 直接复用，暂保留最小兼容实现。
+  - BRC20 history 已改为固定宽度整数和 raw pkScript 新格式，不再需要兼容旧 Pika history 数据；已删除 `api/lib/brc20_swap/utils/script/compress.go`。
   - opcode 常量不再保留重复实现或别名；root/API 调用点直接使用 `txscript.OP_*`，`parser/script/opcode.go`、`api/lib/blkparser/script/opcode.go` 和 `api/lib/brc20_swap/utils/script/opcode.go` 已删除。
-  - 删除 root compression 测试和 `api/lib/blkparser/script/compress_test.go` wrapper 重复测试；`api/lib/brc20_swap/utils/script` 保留窄测试覆盖本地兼容实现。
+  - 删除 root compression 测试、`api/lib/blkparser/script/compress_test.go` wrapper 重复测试，以及 `api/lib/brc20_swap/utils/script/compress_test.go`。
 - 验证建议：
   - 删除旧副本前，先跑现有 script compression 测试。
 
@@ -141,8 +141,8 @@
   - `parser/script`
   - `api/lib/blkparser/script`
 - 完全重复文件：
-  - `compress.go`（root/API blkparser 副本已删除；brc20_swap 因 btcsuite 对应函数未导出且仍有生产调用，暂保留本地兼容实现）
-  - `compress_test.go`（root/API blkparser 副本已删除；brc20_swap 保留窄测试）
+  - `compress.go`（root/API blkparser 副本已删除；brc20_swap history 改为非压缩新格式后也已删除）
+  - `compress_test.go`（root/API blkparser 副本已删除；brc20_swap 对应测试也已删除）
   - `opcode.go`（已删除，root/API 均直接使用 `txscript.OP_*`）
 - 已分叉文件：
   - `model.go`
@@ -168,7 +168,7 @@
   - root `utils.go` 保留优化后的 `GetOpcodeFormScript`，API 副本已移除。
 - 建议合并方式：
   - 先评估 API 是否可以直接复用 root `parser/script` 的稳定导出能力。
-  - 当前仓库内 root/API blkparser compression 已无生产调用点，已删除；brc20_swap 因 btcsuite 对应函数未导出且仍有生产调用继续保留本地实现。
+  - 当前仓库内 root/API blkparser compression 已无生产调用点，已删除；brc20_swap history 改为非压缩新格式后，本地 compression 实现也已删除。
   - 再只为稳定基础能力建立 shared parser core。
   - ingest-only inscription parsing 暂留 root，等 API 行为有测试覆盖后再考虑继续合并。
 
@@ -213,7 +213,7 @@
 ## 建议执行顺序
 
 1. 已完成：`nft_content_code.go` 保留在 root `constant`，API NFT content 调用点直接复用 root `constant`。
-2. 已完成：opcode 重复实现已删除，root/API 调用点直接使用 `txscript.OP_*`；root/API blkparser script compression 已删除，brc20_swap 因 btcsuite 对应函数未导出且仍有生产调用保留必要兼容实现。
+2. 已完成：opcode 重复实现已删除，root/API 调用点直接使用 `txscript.OP_*`；root/API blkparser script compression 已删除，brc20_swap history 改为非压缩新格式后也已删除本地 compression 实现。
 3. 已完成：API 直接复用 root `logger`；root 保留 `init()` 并新增 `Init()`。
 4. 只抽 Redis 和 ClickHouse 的共享配置解析，client globals 保持分开。
 5. 小型 utility helper 优先直接复用 root 已稳定导出能力；无法直接复用时，再拆到职责明确的小 helper。
