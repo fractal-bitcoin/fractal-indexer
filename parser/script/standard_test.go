@@ -1,6 +1,10 @@
 package script
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/btcsuite/btcd/txscript"
+)
 
 // buildWitness encodes witness items in the raw blob format used by NewTxWits:
 // <item_count_varint> <item_len_varint><item_bytes>...
@@ -35,35 +39,35 @@ func makePubkey65() []byte { return make([]byte, 65) }
 // ClassifyStandardDust tests
 
 func TestClassifyStandardDust_P2WPKH_294(t *testing.T) {
-	stype := []byte{OP_0, OP_DATA_20}
+	stype := []byte{txscript.OP_0, txscript.OP_DATA_20}
 	if !ClassifyStandardDust(stype, 294) {
 		t.Fatal("expected true for P2WPKH+294")
 	}
 }
 
 func TestClassifyStandardDust_P2TR_330(t *testing.T) {
-	stype := []byte{OP_1, OP_DATA_32}
+	stype := []byte{txscript.OP_1, txscript.OP_DATA_32}
 	if !ClassifyStandardDust(stype, 330) {
 		t.Fatal("expected true for P2TR+330")
 	}
 }
 
 func TestClassifyStandardDust_P2PKH_546(t *testing.T) {
-	stype := []byte{OP_DUP, OP_HASH160, OP_DATA_20, OP_EQUALVERIFY, OP_CHECKSIG}
+	stype := []byte{txscript.OP_DUP, txscript.OP_HASH160, txscript.OP_DATA_20, txscript.OP_EQUALVERIFY, txscript.OP_CHECKSIG}
 	if !ClassifyStandardDust(stype, 546) {
 		t.Fatal("expected true for P2PKH+546")
 	}
 }
 
 func TestClassifyStandardDust_WrongSatoshi(t *testing.T) {
-	stype := []byte{OP_0, OP_DATA_20}
+	stype := []byte{txscript.OP_0, txscript.OP_DATA_20}
 	if ClassifyStandardDust(stype, 700) {
 		t.Fatal("expected false for P2WPKH+700 (non-dust amount)")
 	}
 }
 
 func TestClassifyStandardDust_P2WSH(t *testing.T) {
-	stype := []byte{OP_0, OP_DATA_32}
+	stype := []byte{txscript.OP_0, txscript.OP_DATA_32}
 	if ClassifyStandardDust(stype, 294) {
 		t.Fatal("expected false for P2WSH")
 	}

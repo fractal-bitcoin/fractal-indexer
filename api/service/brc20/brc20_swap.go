@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/dao/rdb"
-	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
 	"fractal-indexer/api/lib/utils"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
@@ -20,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/go-redis/redis/v8"
 	"github.com/unisat-wallet/libbrc20-indexer/conf"
 	"github.com/unisat-wallet/libbrc20-indexer/constant"
@@ -81,9 +81,9 @@ func inscriptionBRC20SwapResultSRF(rows *sql.Rows) (interface{}, error) {
 
 	if len(brc20.TapScriptPk) == 35 &&
 		brc20.TapScriptPk[0] == 32 &&
-		brc20.TapScriptPk[33] == scriptDecoder.OP_CHECKSIGVERIFY &&
-		brc20.TapScriptPk[34] >= scriptDecoder.OP_1 &&
-		brc20.TapScriptPk[34] <= scriptDecoder.OP_8 {
+		brc20.TapScriptPk[33] == txscript.OP_CHECKSIGVERIFY &&
+		brc20.TapScriptPk[34] >= txscript.OP_1 &&
+		brc20.TapScriptPk[34] <= txscript.OP_8 {
 		brc20.AddressType = brc20.TapScriptPk[34]
 	}
 	// sending transfer-function

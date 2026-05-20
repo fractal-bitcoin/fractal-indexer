@@ -1,19 +1,21 @@
 package script
 
+import "github.com/btcsuite/btcd/txscript"
+
 // asSmallInt returns the passed opcode, which must be true according to
 // isSmallInt(), as an integer.
 func asSmallInt(op byte) int {
-	if op == OP_0 {
+	if op == txscript.OP_0 {
 		return 0
 	}
 
-	return int(op - (OP_1 - 1))
+	return int(op - (txscript.OP_1 - 1))
 }
 
 // isSmallInt returns whether or not the opcode is considered a small integer,
 // which is an OP_0, or OP_1 through OP_16.
 func isSmallInt(op byte) bool {
-	if op == OP_0 || (op >= OP_1 && op <= OP_16) {
+	if op == txscript.OP_0 || (op >= txscript.OP_1 && op <= txscript.OP_16) {
 		return true
 	}
 	return false
@@ -25,25 +27,25 @@ func isPubkey(scriptType []byte) bool {
 	// Valid pubkeys are either 33 or 65 bytes.
 	return len(scriptType) == 2 &&
 		(scriptType[0] == 33 || scriptType[0] == 65) &&
-		scriptType[1] == OP_CHECKSIG
+		scriptType[1] == txscript.OP_CHECKSIG
 }
 
 // isPubkeyHash returns true if the script passed is a pay-to-pubkey-hash
 // transaction, false otherwise.
 func isPubkeyHash(scriptType []byte) bool {
 	return len(scriptType) == 5 &&
-		scriptType[0] == OP_DUP &&
-		scriptType[1] == OP_HASH160 &&
-		scriptType[2] == OP_DATA_20 &&
-		scriptType[3] == OP_EQUALVERIFY &&
-		scriptType[4] == OP_CHECKSIG
+		scriptType[0] == txscript.OP_DUP &&
+		scriptType[1] == txscript.OP_HASH160 &&
+		scriptType[2] == txscript.OP_DATA_20 &&
+		scriptType[3] == txscript.OP_EQUALVERIFY &&
+		scriptType[4] == txscript.OP_CHECKSIG
 }
 
 // Checks if output of IsWitnessProgram comes from a P2A output script
 func isPayToAnchor(scriptType []byte) bool {
 	return len(scriptType) == 4 &&
-		scriptType[0] == OP_1 &&
-		scriptType[1] == OP_DATA_2 &&
+		scriptType[0] == txscript.OP_1 &&
+		scriptType[1] == txscript.OP_DATA_2 &&
 		scriptType[2] == 0x4e &&
 		scriptType[3] == 0x73
 }
@@ -51,33 +53,33 @@ func isPayToAnchor(scriptType []byte) bool {
 // Recent output script type, pays to hash160(script)
 func isPayToScriptHash(scriptType []byte) bool {
 	return len(scriptType) == 3 &&
-		scriptType[0] == OP_HASH160 &&
-		scriptType[1] == OP_DATA_20 &&
-		scriptType[2] == OP_EQUAL
+		scriptType[0] == txscript.OP_HASH160 &&
+		scriptType[1] == txscript.OP_DATA_20 &&
+		scriptType[2] == txscript.OP_EQUAL
 }
 
 // IsPayToWitnessScriptHash returns true if the is in the standard
 // pay-to-witness-script-hash (P2WSH) format, false otherwise.
 func isPayToWitnessScriptHash(scriptType []byte) bool {
 	return len(scriptType) == 2 &&
-		scriptType[0] == OP_0 &&
-		scriptType[1] == OP_DATA_32
+		scriptType[0] == txscript.OP_0 &&
+		scriptType[1] == txscript.OP_DATA_32
 }
 
 // IsPayToWitnessPubKeyHash returns true if the is in the standard
 // pay-to-witness-pubkey-hash (P2WPKH) format, false otherwise.
 func isPayToWitnessPubKeyHash(scriptType []byte) bool {
 	return len(scriptType) == 2 &&
-		scriptType[0] == OP_0 &&
-		scriptType[1] == OP_DATA_20
+		scriptType[0] == txscript.OP_0 &&
+		scriptType[1] == txscript.OP_DATA_20
 }
 
 // IsPayToTaproot returns true if if the passed script is a standard
 // pay-to-taproot (PTTR) scripts, and false otherwise.
 func isPayToTaproot(scriptType []byte) bool {
 	return len(scriptType) == 2 &&
-		scriptType[0] == OP_1 &&
-		scriptType[1] == OP_DATA_32
+		scriptType[0] == txscript.OP_1 &&
+		scriptType[1] == txscript.OP_DATA_32
 }
 
 // isMultiSig returns true if the passed script is a multisig transaction, false
@@ -95,7 +97,7 @@ func isMultiSig(scriptType []byte) bool {
 	if !isSmallInt(scriptType[l-2]) {
 		return false
 	}
-	if scriptType[l-1] != OP_CHECKMULTISIG {
+	if scriptType[l-1] != txscript.OP_CHECKMULTISIG {
 		return false
 	}
 
@@ -115,17 +117,17 @@ func isMultiSig(scriptType []byte) bool {
 }
 
 func IsOpreturn(scriptType []byte) bool {
-	if len(scriptType) > 0 && scriptType[0] == OP_RETURN {
+	if len(scriptType) > 0 && scriptType[0] == txscript.OP_RETURN {
 		return true
 	}
-	if len(scriptType) > 1 && scriptType[0] == OP_FALSE && scriptType[1] == OP_RETURN {
+	if len(scriptType) > 1 && scriptType[0] == txscript.OP_FALSE && scriptType[1] == txscript.OP_RETURN {
 		return true
 	}
 	return false
 }
 
 func IsFalseOpreturn(scriptType []byte) bool {
-	if len(scriptType) > 1 && scriptType[0] == OP_FALSE && scriptType[1] == OP_RETURN {
+	if len(scriptType) > 1 && scriptType[0] == txscript.OP_FALSE && scriptType[1] == txscript.OP_RETURN {
 		return true
 	}
 	return false
@@ -139,7 +141,7 @@ func IsLockingScriptOnlyEqual(pkScript []byte) bool {
 	if length == 0 {
 		return true
 	}
-	if pkScript[length-1] != OP_EQUAL {
+	if pkScript[length-1] != txscript.OP_EQUAL {
 		return false
 	}
 	cnt, cntsize := SafeDecodeVarIntForScript(pkScript)

@@ -2,6 +2,8 @@ package script
 
 import (
 	"encoding/binary"
+
+	"github.com/btcsuite/btcd/txscript"
 )
 
 // false if ord 1 1 type 0 content endif
@@ -23,7 +25,7 @@ func ExtractPkScript_next(pkScript []byte) (data []byte, size uint, op, finish, 
 		return data, size, isOpcode, false, true
 	}
 
-	if data[0] == OP_ENDIF { // found
+	if data[0] == txscript.OP_ENDIF { // found
 		return nil, size, true, true, true
 	}
 	// check invalid OP_CODE
@@ -40,7 +42,7 @@ func ExtractPkScriptForNFTJubilee(pkScript []byte, nfts []NFTData) []NFTData {
 	var tapScriptPk []byte
 	if pkScript[0] == 32 && length > 1+32+1+1 {
 		tapScriptPk = pkScript[:35] // zero-copy slice into raw
-		if pkScript[33] == OP_CHECKSIGVERIFY && pkScript[34] >= OP_1 && pkScript[34] <= OP_8 {
+		if pkScript[33] == txscript.OP_CHECKSIGVERIFY && pkScript[34] >= txscript.OP_1 && pkScript[34] <= txscript.OP_8 {
 			isPubKeyVerify = true
 		}
 	}
@@ -48,13 +50,13 @@ func ExtractPkScriptForNFTJubilee(pkScript []byte, nfts []NFTData) []NFTData {
 	p := uint(0)
 	e := uint(length)
 
-	prefix0 := OP_TRUE
-	prefix1 := OP_TRUE
+	prefix0 := txscript.OP_TRUE
+	prefix1 := txscript.OP_TRUE
 	for p < e {
 
 		// check stutter
 		var stutter bool
-		if prefix0 == OP_FALSE || (prefix1 == OP_FALSE && prefix0 == OP_IF) {
+		if prefix0 == txscript.OP_FALSE || (prefix1 == txscript.OP_FALSE && prefix0 == txscript.OP_IF) {
 			stutter = true
 		}
 
@@ -66,15 +68,15 @@ func ExtractPkScriptForNFTJubilee(pkScript []byte, nfts []NFTData) []NFTData {
 			p += size // consume OP_CODE derectly, notice: OP_FALSE is a PUSH and a OPCODE
 			if !isPush || len(data) != 0 {
 				// skip if not OP_FALSE
-				prefix0 = OP_TRUE
-				prefix1 = OP_TRUE
+				prefix0 = txscript.OP_TRUE
+				prefix1 = txscript.OP_TRUE
 				continue
 			}
 		}
 
 		// roll
 		prefix1 = prefix0
-		prefix0 = OP_FALSE
+		prefix0 = txscript.OP_FALSE
 
 		// min envelope length: OP_IF OP_PUSH_DATA3 'ord' OP_ENDIF
 		if p+6 > e {
@@ -86,7 +88,7 @@ func ExtractPkScriptForNFTJubilee(pkScript []byte, nfts []NFTData) []NFTData {
 			if data == nil {
 				break
 			}
-			if isPush || !isOpcode || size != 1 || data[0] != OP_IF {
+			if isPush || !isOpcode || size != 1 || data[0] != txscript.OP_IF {
 				continue // skip if not OP_IF
 			}
 			p += size // consume OP_CODE after make sure it's "IF"
@@ -94,7 +96,7 @@ func ExtractPkScriptForNFTJubilee(pkScript []byte, nfts []NFTData) []NFTData {
 
 		// roll
 		prefix1 = prefix0
-		prefix0 = OP_IF
+		prefix0 = txscript.OP_IF
 
 		{ // check OP_PUSH_DATA_3 magic ord
 			size, data, isPush, _ := GetOpcodeFormScript(pkScript[p:])
@@ -115,8 +117,8 @@ func ExtractPkScriptForNFTJubilee(pkScript []byte, nfts []NFTData) []NFTData {
 		nft.IsKeyVerify = isPubKeyVerify
 
 		// reset
-		prefix0 = OP_TRUE
-		prefix1 = OP_TRUE
+		prefix0 = txscript.OP_TRUE
+		prefix1 = txscript.OP_TRUE
 
 		// parse nft
 		for offset < e {
