@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	indexerScript "fractal-indexer/parser/script"
 )
 
 const (
@@ -109,17 +110,6 @@ type NFTData struct {
 	ContentBody     []byte // 0, may be very long (composed of multiple 520-byte chunks, with no tag before each chunk).
 }
 
-func HashString(data []byte) (res string) {
-	length := 32
-	var reverseData [32]byte
-
-	// need reverse
-	for i := 0; i < length; i++ {
-		reverseData[i] = data[length-i-1]
-	}
-	return hex.EncodeToString(reverseData[:])
-}
-
 func DecodeInscriptionFromBin(script []byte) (id string) {
 	if len(script) < 32 || len(script) > 36 {
 		return ""
@@ -138,7 +128,7 @@ func DecodeInscriptionFromBin(script []byte) (id string) {
 		idx = binary.LittleEndian.Uint32(script[32:36])
 	}
 
-	id = fmt.Sprintf("%si%d", HashString(script[:32]), idx)
+	id = fmt.Sprintf("%si%d", indexerScript.HashString(script[:32]), idx)
 	return id
 }
 
