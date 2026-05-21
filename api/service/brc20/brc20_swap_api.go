@@ -8,11 +8,11 @@ import (
 	"fractal-indexer/logger"
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	swapIndexer "github.com/unisat-wallet/libbrc20-indexer/indexer"
-	swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
-	swapUtils "github.com/unisat-wallet/libbrc20-indexer/utils"
+	"fractal-indexer/api/lib/brc20_swap/conf"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	swapIndexer "fractal-indexer/api/lib/brc20_swap/indexer"
+	swapModel "fractal-indexer/api/lib/brc20_swap/model"
+	swapUtils "fractal-indexer/api/lib/brc20_swap/utils"
 	"go.uber.org/zap"
 )
 

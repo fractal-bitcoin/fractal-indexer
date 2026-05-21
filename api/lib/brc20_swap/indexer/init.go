@@ -6,9 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
-	"github.com/unisat-wallet/libbrc20-indexer/muhash"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	"fractal-indexer/api/lib/brc20_swap/model"
+	"fractal-indexer/api/lib/brc20_swap/muhash"
 
 	"github.com/wangjohn/quickselect"
 )

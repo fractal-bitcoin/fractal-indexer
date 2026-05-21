@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/unisat-wallet/libbrc20-indexer/model"
-	"github.com/unisat-wallet/libbrc20-indexer/uint128"
+	"fractal-indexer/api/lib/brc20_swap/model"
+	"fractal-indexer/api/lib/brc20_swap/uint128"
 )
 
 func makeBalance(ticker, pkscript string, avail, transfer string, precision int) *model.BRC20TokenBalance {

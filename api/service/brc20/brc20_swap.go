@@ -19,14 +19,14 @@ import (
 	"sync"
 	"time"
 
+	"fractal-indexer/api/lib/brc20_swap/conf"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	brc20swapIndexer "fractal-indexer/api/lib/brc20_swap/indexer"
+	brc20swapLoader "fractal-indexer/api/lib/brc20_swap/loader"
+	brc20swapModel "fractal-indexer/api/lib/brc20_swap/model"
+	swapModel "fractal-indexer/api/lib/brc20_swap/model"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/go-redis/redis/v8"
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	brc20swapIndexer "github.com/unisat-wallet/libbrc20-indexer/indexer"
-	brc20swapLoader "github.com/unisat-wallet/libbrc20-indexer/loader"
-	brc20swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
-	swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
 	"go.uber.org/zap"
 )
 

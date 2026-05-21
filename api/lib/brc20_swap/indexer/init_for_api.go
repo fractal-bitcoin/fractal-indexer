@@ -3,7 +3,7 @@ package indexer
 import (
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/model"
+	"fractal-indexer/api/lib/brc20_swap/model"
 )
 
 func (g *BRC20ModuleIndexer) GetUserTokenBalanceMapForAPI(userPkScript string) (userTokens map[string]*model.BRC20TokenBalance) {

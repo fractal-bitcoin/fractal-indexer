@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	brc20Utils "github.com/unisat-wallet/libbrc20-indexer/utils"
+	brc20Utils "fractal-indexer/api/lib/brc20_swap/utils"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

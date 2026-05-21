@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
+	"fractal-indexer/api/lib/brc20_swap/conf"
+	"fractal-indexer/api/lib/brc20_swap/model"
+	"fractal-indexer/api/lib/brc20_swap/muhash"
 	"github.com/go-redis/redis/v8"
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
-	"github.com/unisat-wallet/libbrc20-indexer/muhash"
 )
 
 type BRC20ModuleIndexerStore struct {

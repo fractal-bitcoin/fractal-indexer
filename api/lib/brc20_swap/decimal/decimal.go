@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/uint128"
+	"fractal-indexer/api/lib/brc20_swap/uint128"
 )
 
 const MAX_PRECISION = 18

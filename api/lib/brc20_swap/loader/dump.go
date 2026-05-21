@@ -11,11 +11,11 @@ import (
 	"sort"
 	"strings"
 
+	"fractal-indexer/api/lib/brc20_swap/conf"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	"fractal-indexer/api/lib/brc20_swap/model"
+	"fractal-indexer/api/lib/brc20_swap/utils"
 	"github.com/go-redis/redis/v8"
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
-	"github.com/unisat-wallet/libbrc20-indexer/utils"
 )
 
 func DumpBRC20InputData(fname string, brc20Datas chan interface{}, hexBody bool) {

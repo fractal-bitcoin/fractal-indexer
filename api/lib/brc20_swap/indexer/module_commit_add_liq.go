@@ -4,9 +4,9 @@ import (
 	"errors"
 	"log"
 
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	"github.com/unisat-wallet/libbrc20-indexer/decimal"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	"fractal-indexer/api/lib/brc20_swap/decimal"
+	"fractal-indexer/api/lib/brc20_swap/model"
 )
 
 func (g *BRC20ModuleIndexer) ProcessCommitFunctionAddLiquidity(moduleInfo *model.BRC20ModuleSwapInfo, f *model.SwapFunctionData) (err error) {

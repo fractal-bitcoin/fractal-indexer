@@ -4,11 +4,11 @@ import (
 	"crypto/sha256"
 	"fmt"
 
+	"fractal-indexer/api/lib/brc20_swap/utils"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/unisat-wallet/libbrc20-indexer/utils"
 )
 
 func GetSha256(data []byte) (hash []byte) {

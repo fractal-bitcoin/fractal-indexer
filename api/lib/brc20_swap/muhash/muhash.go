@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/model"
+	"fractal-indexer/api/lib/brc20_swap/model"
 	"golang.org/x/crypto/chacha20"
 )
 

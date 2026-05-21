@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	"github.com/unisat-wallet/libbrc20-indexer/decimal"
-	"github.com/unisat-wallet/libbrc20-indexer/uint128"
-	"github.com/unisat-wallet/libbrc20-indexer/utils"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	"fractal-indexer/api/lib/brc20_swap/decimal"
+	"fractal-indexer/api/lib/brc20_swap/uint128"
+	"fractal-indexer/api/lib/brc20_swap/utils"
 )
 
 var (

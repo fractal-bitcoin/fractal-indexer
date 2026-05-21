@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/unisat-wallet/libbrc20-indexer/decimal"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
+	"fractal-indexer/api/lib/brc20_swap/decimal"
+	"fractal-indexer/api/lib/brc20_swap/model"
 )
 
 // ProcessCommitFunctionSwap

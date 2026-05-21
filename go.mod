@@ -23,9 +23,9 @@ require (
 	github.com/ReneKroon/ttlcache/v2 v2.7.0 // indirect
 	github.com/adhocore/jsonc v0.10.0
 	github.com/btcsuite/btcd v0.23.5-0.20231219003633-4c2ce6daed8f
-	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/btcsuite/btcd/btcutil v1.1.4
-	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
@@ -46,8 +46,7 @@ require (
 	github.com/swaggo/gin-swagger v1.5.2
 	github.com/swaggo/swag v1.8.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	github.com/unisat-wallet/libbrc20-indexer v0.0.0-00010101000000-000000000000
-	github.com/wangjohn/quickselect v0.0.0-20240903062940-6fa78e836728 // indirect
+	github.com/wangjohn/quickselect v0.0.0-20240903062940-6fa78e836728
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
@@ -100,5 +99,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/unisat-wallet/libbrc20-indexer => ./api/lib/brc20_swap

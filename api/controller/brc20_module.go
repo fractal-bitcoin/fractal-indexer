@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	swapModel "fractal-indexer/api/lib/brc20_swap/model"
 	"github.com/gin-gonic/gin"
-	swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
 	"go.uber.org/zap"
 )
 

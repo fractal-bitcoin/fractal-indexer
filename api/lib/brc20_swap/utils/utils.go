@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"strings"
 
+	"fractal-indexer/api/lib/brc20_swap/conf"
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
 )
 
 func DecodeTokensFromSwapPair(tickPair string) (token0, token1 string, err error) {
