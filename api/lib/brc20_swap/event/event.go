@@ -9,9 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
-	"github.com/unisat-wallet/libbrc20-indexer/utils"
+	"fractal-indexer/api/lib/brc20_swap/conf"
+	"fractal-indexer/api/lib/brc20_swap/model"
+	"fractal-indexer/api/lib/brc20_swap/utils"
 )
 
 func InitTickDataFromFile(fname string) (brc20Datas []*model.InscriptionBRC20Data, err error) {
@@ -56,7 +56,6 @@ func InitTickDataFromFile(fname string) (brc20Datas []*model.InscriptionBRC20Dat
 			IdxInBlock: uint32(idx), // fake idx
 		}
 		data.CreateIdxKey = key.Uint64()
-		data.CreateIdxString = key.String()
 		data.IsTransfer = false
 
 		data.ContentBody, _ = json.Marshal(info)

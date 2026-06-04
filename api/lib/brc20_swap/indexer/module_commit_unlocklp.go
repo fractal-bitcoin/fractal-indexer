@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/unisat-wallet/libbrc20-indexer/model"
+	"fractal-indexer/api/lib/brc20_swap/model"
 )
 
 func (g *BRC20ModuleIndexer) ProcessCommitFunctionUnlockLp(moduleInfo *model.BRC20ModuleSwapInfo, f *model.SwapFunctionData) error {

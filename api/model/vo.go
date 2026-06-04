@@ -1,6 +1,6 @@
 package model
 
-import brc20Model "github.com/unisat-wallet/libbrc20-indexer/model"
+import brc20Model "fractal-indexer/api/lib/brc20_swap/model"
 
 type Welcome struct {
 	Contact string `json:"contact"`

@@ -5,28 +5,28 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	queryConstant "fractal-indexer/api/constant"
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/dao/rdb"
-	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
-	mtx "fractal-indexer/api/lib/midware"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
+	indexerConstant "fractal-indexer/constant"
+	mtx "fractal-indexer/lib/midware"
+	"fractal-indexer/logger"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"fractal-indexer/api/lib/brc20_swap/conf"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	brc20swapIndexer "fractal-indexer/api/lib/brc20_swap/indexer"
+	brc20swapLoader "fractal-indexer/api/lib/brc20_swap/loader"
+	brc20swapModel "fractal-indexer/api/lib/brc20_swap/model"
+	swapModel "fractal-indexer/api/lib/brc20_swap/model"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/go-redis/redis/v8"
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	brc20swapIndexer "github.com/unisat-wallet/libbrc20-indexer/indexer"
-	brc20swapLoader "github.com/unisat-wallet/libbrc20-indexer/loader"
-	brc20swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
-	swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
 	"go.uber.org/zap"
 )
 
@@ -73,7 +73,7 @@ func inscriptionBRC20SwapResultSRF(rows *sql.Rows) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	if decoded, ok := queryConstant.GetNFTContentByCode(contentCode); ok {
+	if decoded, ok := indexerConstant.GetNFTContentByCode(contentCode); ok {
 		brc20.ContentBody = []byte(decoded)
 	} else {
 		brc20.ContentBody = contentBody
@@ -81,9 +81,9 @@ func inscriptionBRC20SwapResultSRF(rows *sql.Rows) (interface{}, error) {
 
 	if len(brc20.TapScriptPk) == 35 &&
 		brc20.TapScriptPk[0] == 32 &&
-		brc20.TapScriptPk[33] == scriptDecoder.OP_CHECKSIGVERIFY &&
-		brc20.TapScriptPk[34] >= scriptDecoder.OP_1 &&
-		brc20.TapScriptPk[34] <= scriptDecoder.OP_8 {
+		brc20.TapScriptPk[33] == txscript.OP_CHECKSIGVERIFY &&
+		brc20.TapScriptPk[34] >= txscript.OP_1 &&
+		brc20.TapScriptPk[34] <= txscript.OP_8 {
 		brc20.AddressType = brc20.TapScriptPk[34]
 	}
 	// sending transfer-function

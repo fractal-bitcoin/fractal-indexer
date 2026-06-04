@@ -1,11 +1,11 @@
 package service
 
 import (
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"sort"
 
-	brc20Model "github.com/unisat-wallet/libbrc20-indexer/model"
+	brc20Model "fractal-indexer/api/lib/brc20_swap/model"
 )
 
 func ProcessUpdateLatest5dTickerHoldersSummary() {

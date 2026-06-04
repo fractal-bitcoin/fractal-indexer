@@ -8,11 +8,11 @@ import (
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/dao/rdb"
 	_ "fractal-indexer/api/docs"
-	"fractal-indexer/api/lib/midware"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
 	"fractal-indexer/api/service/brc20"
+	"fractal-indexer/lib/midware"
+	"fractal-indexer/logger"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,9 +20,10 @@ import (
 	"syscall"
 	"time"
 
+	brc20swapIndexer "fractal-indexer/api/lib/brc20_swap/indexer"
 	"github.com/spf13/viper"
-	brc20swapIndexer "github.com/unisat-wallet/libbrc20-indexer/indexer"
 
+	"fractal-indexer/api/lib/brc20_swap/conf"
 	"github.com/btcsuite/btcd/chaincfg"
 	cache "github.com/chenyahui/gin-cache"
 	"github.com/chenyahui/gin-cache/persist"
@@ -32,7 +33,6 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
 	"go.uber.org/zap"
 )
 

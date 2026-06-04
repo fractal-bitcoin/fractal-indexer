@@ -1,8 +1,6 @@
 chain_type: Fractal
 skip_missing_utxo: false
 
-zmq_block: "tcp://fractald:16330"
-zmq_tx: "tcp://fractald:16331"
 rpc: "http://fractald:16332"
 rpc_auth: "user:password"
 

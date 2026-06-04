@@ -6,10 +6,10 @@ import (
 	"errors"
 	"log"
 
-	"github.com/unisat-wallet/libbrc20-indexer/conf"
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
-	"github.com/unisat-wallet/libbrc20-indexer/utils"
+	"fractal-indexer/api/lib/brc20_swap/conf"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	"fractal-indexer/api/lib/brc20_swap/model"
+	"fractal-indexer/api/lib/brc20_swap/utils"
 )
 
 func (g *BRC20ModuleIndexer) GetCommitFunctionProcess(function string) (func(*model.BRC20ModuleSwapInfo, *model.SwapFunctionData) error, bool) {

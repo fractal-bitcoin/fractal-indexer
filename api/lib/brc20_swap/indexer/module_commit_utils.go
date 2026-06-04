@@ -7,11 +7,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/decimal"
-	"github.com/unisat-wallet/libbrc20-indexer/model"
-	"github.com/unisat-wallet/libbrc20-indexer/uint128"
-	"github.com/unisat-wallet/libbrc20-indexer/utils"
-	"github.com/unisat-wallet/libbrc20-indexer/utils/bip322"
+	"fractal-indexer/api/lib/brc20_swap/decimal"
+	"fractal-indexer/api/lib/brc20_swap/model"
+	"fractal-indexer/api/lib/brc20_swap/uint128"
+	"fractal-indexer/api/lib/brc20_swap/utils"
+	"fractal-indexer/api/lib/brc20_swap/utils/bip322"
 
 	"github.com/btcsuite/btcd/wire"
 )

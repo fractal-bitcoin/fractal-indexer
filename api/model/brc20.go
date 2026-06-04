@@ -1,8 +1,8 @@
 package model
 
 import (
-	brc20swapIndexer "github.com/unisat-wallet/libbrc20-indexer/indexer"
-	brc20Model "github.com/unisat-wallet/libbrc20-indexer/model"
+	brc20swapIndexer "fractal-indexer/api/lib/brc20_swap/indexer"
+	brc20Model "fractal-indexer/api/lib/brc20_swap/model"
 )
 
 var (

@@ -3,9 +3,9 @@ package controller
 import (
 	"encoding/hex"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
+	"fractal-indexer/logger"
 	"net/http"
 	"strconv"
 

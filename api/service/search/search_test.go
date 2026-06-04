@@ -2,9 +2,9 @@ package search_test
 
 import (
 	"fmt"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service/search"
+	"fractal-indexer/logger"
 	"testing"
 
 	"go.uber.org/zap"

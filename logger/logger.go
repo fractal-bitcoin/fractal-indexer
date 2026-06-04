@@ -20,6 +20,10 @@ var (
 )
 
 func init() {
+	Init()
+}
+
+func Init() {
 	enc := zap.NewProductionEncoderConfig()
 	enc.EncodeTime = zapcore.RFC3339TimeEncoder
 

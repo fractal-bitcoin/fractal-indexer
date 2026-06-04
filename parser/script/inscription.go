@@ -1,5 +1,7 @@
 package script
 
+import "github.com/btcsuite/btcd/txscript"
+
 // false if ord 1 1 type 0 content endif
 // false false if ord ...
 // false if false if ord ...
@@ -19,7 +21,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft NFTData, hasNFT bool) {
 
 	if pkScript[0] == 32 && length > 1+32+1+1 {
 		nft.TapScriptPk = pkScript[:35] // zero-copy slice into raw
-		if pkScript[33] == OP_CHECKSIGVERIFY && pkScript[34] >= OP_1 && pkScript[34] <= OP_8 {
+		if pkScript[33] == txscript.OP_CHECKSIGVERIFY && pkScript[34] >= txscript.OP_1 && pkScript[34] <= txscript.OP_8 {
 			nft.IsKeyVerify = true
 		}
 	}
@@ -51,7 +53,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft NFTData, hasNFT bool) {
 			break
 		}
 		p += size // consume OP_CODE
-		if isPush || !isOpcode || size != 1 || data[0] != OP_IF {
+		if isPush || !isOpcode || size != 1 || data[0] != txscript.OP_IF {
 			// fmt.Println("skip not OP_IF")
 			// skip if not OP_IF
 			continue
@@ -80,7 +82,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft NFTData, hasNFT bool) {
 			}
 			offset += size // consume OP_CODE
 			if !isPush {
-				if size == 1 && data[0] == OP_ENDIF { // found
+				if size == 1 && data[0] == txscript.OP_ENDIF { // found
 					return nft, true
 				}
 				// check invalid OP_CODE
@@ -107,7 +109,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft NFTData, hasNFT bool) {
 						// append content type data
 						nft.ContentBody = append(nft.ContentBody, data...)
 					} else {
-						if data[0] == OP_ENDIF { // found
+						if data[0] == txscript.OP_ENDIF { // found
 							return nft, true
 						}
 						// check invalid OP_CODE
@@ -135,7 +137,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft NFTData, hasNFT bool) {
 
 			// fixme: minimal pushdata content type
 			// if size == 1 && (data[0] == OP_1 || data[0] == OP_DATA_1 ) {
-			if len(data) == 1 && data[0] == OP_DATA_1 {
+			if len(data) == 1 && data[0] == txscript.OP_DATA_1 {
 				size, data, isPush, isOpcode := GetOpcodeFormScript(pkScript[offset:])
 				if data == nil {
 					break
@@ -153,7 +155,7 @@ func ExtractPkScriptForNFT(pkScript []byte) (nft NFTData, hasNFT bool) {
 					// append content type data
 					nft.ContentType = append(nft.ContentType, data...)
 				} else {
-					if data[0] == OP_ENDIF { // found
+					if data[0] == txscript.OP_ENDIF { // found
 						return nft, true
 					}
 					// check invalid OP_CODE

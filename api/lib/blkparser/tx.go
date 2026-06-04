@@ -3,6 +3,7 @@ package blkparser
 import (
 	"encoding/binary"
 	"fractal-indexer/api/model"
+	"fractal-indexer/utils"
 )
 
 func NewTx(rawtx []byte) (tx *model.Tx, offset uint) {
@@ -56,7 +57,7 @@ func NewTxIn(txinraw []byte) (txin *model.TxIn, offset uint) {
 	txin = new(model.TxIn)
 	txin.InputHash = make([]byte, 32)
 	copy(txin.InputHash, txinraw[0:32])
-	txin.InputHashHex = HashString(txin.InputHash)
+	txin.InputHashHex = utils.HashString(txin.InputHash)
 	txin.InputVout = binary.LittleEndian.Uint32(txinraw[32:36])
 	offset = 36
 

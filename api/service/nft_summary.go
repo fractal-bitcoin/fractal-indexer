@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"fractal-indexer/api/dao/clickhouse"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"strings"
 
 	"go.uber.org/zap"

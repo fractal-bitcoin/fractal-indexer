@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/unisat-wallet/libbrc20-indexer/model"
+	"fractal-indexer/api/lib/brc20_swap/model"
 )
 
 func LoadBRC20InputJsonData(fname string) ([]*model.InscriptionBRC20Data, error) {

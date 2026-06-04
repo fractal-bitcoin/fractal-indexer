@@ -75,55 +75,6 @@ func callRPCWithRetry(method string, params ...interface{}) (*jsonrpc.RPCRespons
 	return nil, lastErr
 }
 
-func GetRawMemPoolRPC(blockid string) []interface{} {
-	response, err := rpcClient.Call("getrawtxmempool", []string{blockid})
-	if err != nil {
-		logger.Log.Info("call failed", zap.Error(err))
-		return nil
-	}
-
-	if response.Error != nil {
-		logger.Log.Info("Receive remote return", zap.Any("response", response))
-		return nil
-	}
-
-	rawtxs, ok := response.Result.([]interface{})
-	if !ok {
-		logger.Log.Info("mempool not list: %T", zap.Any("response", response.Result))
-		return nil
-	}
-	return rawtxs
-}
-
-func GetRawTxRPC(txid interface{}) []byte {
-	response, err := rpcClient.Call("getrawtransaction", []interface{}{txid})
-	if err != nil {
-		logger.Log.Info("call failed", zap.Error(err))
-		return nil
-	}
-
-	if response.Error != nil {
-		logger.Log.Info("Receive remote return",
-			zap.String("txid", txid.(string)),
-			zap.Any("response", response))
-		return nil
-	}
-
-	rawtxString, ok := response.Result.(string)
-	if !ok {
-		logger.Log.Info("mempool entry not string")
-		return nil
-	}
-
-	rawtx, err := hex.DecodeString(rawtxString)
-	if err != nil {
-		logger.Log.Info("rawtx hex err", zap.String("rawtx[:64]", rawtxString[:64]))
-		return nil
-	}
-
-	return rawtx
-}
-
 // get height
 func GetBlockCountRPC() uint32 {
 	response, err := callRPCWithRetry("getblockcount", []string{})

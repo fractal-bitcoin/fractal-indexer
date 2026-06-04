@@ -10,9 +10,9 @@ import (
 	"fractal-indexer/api/dao/rdb"
 	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
+	"fractal-indexer/logger"
 	"strings"
 
 	"github.com/go-redis/redis/v8"

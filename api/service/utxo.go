@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"fractal-indexer/api/constant"
 	"fractal-indexer/api/dao/rdb"
-	"fractal-indexer/api/lib/blkparser"
 	scriptDecoder "fractal-indexer/api/lib/blkparser/script"
-	mtx "fractal-indexer/api/lib/midware"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	mtx "fractal-indexer/lib/midware"
+	"fractal-indexer/logger"
+	indexerUtils "fractal-indexer/utils"
 
 	redis "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -69,7 +69,7 @@ func getNonTokenUtxoFromRedisReturnAddressOnlyWithPagination(caller string, utxo
 		outpoint := utxoOutpoints[outpointIdx]
 		res, err := data.Result()
 		if err == redis.Nil {
-			txIdHex := blkparser.HashString([]byte(outpoint[:32]))
+			txIdHex := indexerUtils.HashString([]byte(outpoint[:32]))
 			txIndex := int(binary.LittleEndian.Uint32([]byte(outpoint[32:])))
 			txOutsRsp = append(txOutsRsp, &model.TxStandardOutResp{
 				TxIdHex: txIdHex,
@@ -126,7 +126,7 @@ func getNonTokenUtxoFromRedis(caller string, utxoOutpoints []string, withNFT boo
 		outpoint := utxoOutpoints[idx]
 		data, err := utxoCmd.Result()
 		if err == redis.Nil {
-			txIdHex := blkparser.HashString([]byte(outpoint[:32]))
+			txIdHex := indexerUtils.HashString([]byte(outpoint[:32]))
 			txIndex := int(binary.LittleEndian.Uint32([]byte(outpoint[32:])))
 			txOutsRsp = append(txOutsRsp, &model.TxStandardOutResp{
 				TxIdHex: txIdHex,
@@ -144,7 +144,7 @@ func getNonTokenUtxoFromRedis(caller string, utxoOutpoints []string, withNFT boo
 		txout := model.NewTxoData([]byte(outpoint), []byte(data))
 		addressData := scriptDecoder.ExtractPkScriptForTxo(txout.PkScript, txout.ScriptType)
 		if len(txout.CreatePointOfNFTs) > 1000 {
-			logger.Log.Warn("getNonTokenUtxoFromRedis utxo has too many inscriptions, will limit to 500", zap.String("caller", caller), zap.String("utxid", blkparser.HashString(txout.UTxid)), zap.Uint32("vout", txout.Vout), zap.Int("inscriptions_count", len(txout.CreatePointOfNFTs)))
+			logger.Log.Warn("getNonTokenUtxoFromRedis utxo has too many inscriptions, will limit to 500", zap.String("caller", caller), zap.String("utxid", indexerUtils.HashString(txout.UTxid)), zap.Uint32("vout", txout.Vout), zap.Int("inscriptions_count", len(txout.CreatePointOfNFTs)))
 		}
 		var limitedCreatePointOfNFTs []*model.NFTCreatePoint
 		for _, nftpoint := range txout.CreatePointOfNFTs {
@@ -157,7 +157,7 @@ func getNonTokenUtxoFromRedis(caller string, utxoOutpoints []string, withNFT boo
 			limitedCreatePointOfNFTs = append(limitedCreatePointOfNFTs, nftpoint)
 		}
 		txOutsRsp = append(txOutsRsp, &model.TxStandardOutResp{
-			TxIdHex:  blkparser.HashString(txout.UTxid),
+			TxIdHex:  indexerUtils.HashString(txout.UTxid),
 			Vout:     int(txout.Vout),
 			Satoshi:  int(txout.Satoshi),
 			CodeType: int(addressData.CodeType),
@@ -219,7 +219,7 @@ func GetUtxoByTxIdAndIdx(ctx context.Context, txId []byte, txIdHex string, txInd
 	redisKeyUtxo := "u" + string(outpoint[:])
 
 	txOutRsp := &model.TxStandardOutResp{
-		TxIdHex: blkparser.HashString(txId),
+		TxIdHex: indexerUtils.HashString(txId),
 		Vout:    txIndex,
 	}
 	var addressData *scriptDecoder.AddressData
@@ -252,7 +252,7 @@ func GetUtxoByTxIdAndIdx(ctx context.Context, txId []byte, txIdHex string, txInd
 	}
 
 	txOutRsp = &model.TxStandardOutResp{
-		TxIdHex:  blkparser.HashString(txout.UTxid),
+		TxIdHex:  indexerUtils.HashString(txout.UTxid),
 		Vout:     int(txout.Vout),
 		Satoshi:  int(txout.Satoshi),
 		CodeType: int(addressData.CodeType),

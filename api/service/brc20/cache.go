@@ -1,14 +1,14 @@
 package brc20
 
 import (
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/unisat-wallet/libbrc20-indexer/constant"
-	brc20Model "github.com/unisat-wallet/libbrc20-indexer/model"
+	"fractal-indexer/api/lib/brc20_swap/constant"
+	brc20Model "fractal-indexer/api/lib/brc20_swap/model"
 	"go.uber.org/zap"
 )
 

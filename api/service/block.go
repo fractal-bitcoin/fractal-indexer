@@ -7,9 +7,9 @@ import (
 	"fractal-indexer/api/constant"
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/dao/rdb"
-	"fractal-indexer/api/lib/blkparser"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
+	"fractal-indexer/logger"
+	"fractal-indexer/utils"
 
 	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
@@ -67,10 +67,10 @@ LIMIT %d
 			Height:         int(block.Height),
 			Version:        int(block.Version),
 			AuxPow:         block.Version&constant.AUXPOW_VERSON_MASK > 0,
-			BlockIdHex:     blkparser.HashString(block.BlockId),
-			PrevBlockIdHex: blkparser.HashString(block.PrevBlockId),
-			NextBlockIdHex: blkparser.HashString(block.NextBlockId),
-			MerkleRootHex:  blkparser.HashString(block.MerkleRoot),
+			BlockIdHex:     utils.HashString(block.BlockId),
+			PrevBlockIdHex: utils.HashString(block.PrevBlockId),
+			NextBlockIdHex: utils.HashString(block.NextBlockId),
+			MerkleRootHex:  utils.HashString(block.MerkleRoot),
 			TxCount:        int(block.TxCount),
 			InSatoshi:      int(block.InSatoshi),
 			OutSatoshi:     int(block.OutSatoshi),
@@ -134,10 +134,10 @@ func GetBlockBySql(psql string) (blk *model.BlockInfoResp, err error) {
 		Height:         int(block.Height),
 		Version:        int(block.Version),
 		AuxPow:         block.Version&constant.AUXPOW_VERSON_MASK > 0,
-		BlockIdHex:     blkparser.HashString(block.BlockId),
-		PrevBlockIdHex: blkparser.HashString(block.PrevBlockId),
-		NextBlockIdHex: blkparser.HashString(block.NextBlockId),
-		MerkleRootHex:  blkparser.HashString(block.MerkleRoot),
+		BlockIdHex:     utils.HashString(block.BlockId),
+		PrevBlockIdHex: utils.HashString(block.PrevBlockId),
+		NextBlockIdHex: utils.HashString(block.NextBlockId),
+		MerkleRootHex:  utils.HashString(block.MerkleRoot),
 		TxCount:        int(block.TxCount),
 		InSatoshi:      int(block.InSatoshi),
 		OutSatoshi:     int(block.OutSatoshi),

@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
+	"fractal-indexer/logger"
 	"net/http"
 	"strconv"
 

@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 
-	"github.com/unisat-wallet/libbrc20-indexer/utils"
+	"fractal-indexer/api/lib/brc20_swap/utils"
 )
 
 // history

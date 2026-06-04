@@ -2,11 +2,14 @@ package midware
 
 import (
 	"fmt"
+	"fractal-indexer/logger"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -112,6 +115,7 @@ func (sm *serviceMetrics) Dump(keyFilter, typeFilter, stageFilter string) (metri
 	metricFormat(&metricsBuilder, "memory_alloc", "debug", "runtime", "now", int64(ms.Alloc))
 	metricFormat(&metricsBuilder, "memory_heap_idle", "debug", "runtime", "now", int64(ms.HeapIdle))
 	metricFormat(&metricsBuilder, "memory_heap_released", "debug", "runtime", "now", int64(ms.HeapReleased))
+	metricFormat(&metricsBuilder, "memory_heap_inuse", "debug", "runtime", "now", int64(ms.HeapInuse))
 
 	for idx := range make([]struct{}, metricsCount) {
 		itemIdx := int64(idx)
@@ -209,6 +213,7 @@ func (sm *serviceMetrics) addOrSet(serviceName, serviceType string, isAdd bool, 
 		}
 		// Enforce the maximum metric item count.
 		if nextItemIdx >= mapNumMax {
+			logger.Log.Info("metrics items already hit max limit, can not addorset", zap.Int64("nextItemIdx", nextItemIdx))
 			return
 		}
 		itemIdx = nextItemIdx
@@ -234,6 +239,9 @@ func (sm *serviceMetrics) addOrSet(serviceName, serviceType string, isAdd bool, 
 
 // Set assigns a counter value with an expiration duration.
 func (sm *serviceMetrics) Set(serviceName, serviceType string, value int64, expire time.Duration) {
+	if expire == 0 {
+		expire = modifiedDuration[kAll]
+	}
 	sm.addOrSet(serviceName, serviceType, false, value, expire)
 }
 
@@ -277,6 +285,7 @@ func (sm *serviceMetrics) Update(serviceName, serviceType string, latencyDuratio
 		}
 		// Enforce the maximum metric item count.
 		if nextItemIdx >= mapNumMax {
+			logger.Log.Info("metrics items already hit max limit", zap.Int64("nextItemIdx", nextItemIdx))
 			return
 		}
 		itemIdx = nextItemIdx
@@ -305,4 +314,36 @@ func (sm *serviceMetrics) Update(serviceName, serviceType string, latencyDuratio
 		// Response Time
 		data.v[durIdx].latency += latency
 	}
+}
+
+const ReportErrorServiceName = "report-error"
+
+type ErrorType string
+
+const (
+	ErrorRedis      ErrorType = "error-redis"
+	ErrorClickhouse ErrorType = "error-clickhouse"
+	ErrorRpc        ErrorType = "error-rpc"
+	ErrorInternal   ErrorType = "error-internal"
+	ErrorExternal   ErrorType = "error-external"
+)
+
+func (e ErrorType) IsValid() bool {
+	switch e {
+	case ErrorRedis, ErrorClickhouse, ErrorRpc, ErrorInternal, ErrorExternal:
+		return true
+	}
+	return false
+}
+
+func ReportError(errType ErrorType) {
+	if !errType.IsValid() {
+		return
+	}
+
+	ServiceMetrics.count1(ReportErrorServiceName, string(errType))
+}
+
+func (sm *serviceMetrics) count1(serviceName, serviceType string) {
+	sm.Inc(serviceName, serviceType)
 }

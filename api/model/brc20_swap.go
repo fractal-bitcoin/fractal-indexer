@@ -1,6 +1,6 @@
 package model
 
-import swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
+import swapModel "fractal-indexer/api/lib/brc20_swap/model"
 
 type BRC20ModuleHistoryInfo struct {
 	Type  string `json:"type"` // inscribe-deploy/inscribe-mint/inscribe-transfer/transfer/send/receive

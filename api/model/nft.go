@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"sync"
 
-	brc20Model "github.com/unisat-wallet/libbrc20-indexer/model"
+	brc20Model "fractal-indexer/api/lib/brc20_swap/model"
 )
 
 type SearchTypeAndInscriptionContentForSearch struct {

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/btcsuite/btcd/txscript"
 )
 
 // =============================================================================
@@ -23,13 +25,13 @@ func buildEnvelope(fields ...[]byte) []byte {
 	var script []byte
 
 	// OP_FALSE
-	script = append(script, OP_FALSE)
+	script = append(script, txscript.OP_FALSE)
 
 	// OP_IF
-	script = append(script, OP_IF)
+	script = append(script, txscript.OP_IF)
 
 	// "ord" protocol identifier
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("ord")...)
 
 	// Add fields
@@ -38,7 +40,7 @@ func buildEnvelope(fields ...[]byte) []byte {
 	}
 
 	// OP_ENDIF
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	return script
 }
@@ -46,17 +48,17 @@ func buildEnvelope(fields ...[]byte) []byte {
 // pushData creates a pushdata instruction for data
 func pushData(data []byte) []byte {
 	var instr []byte
-	if len(data) <= OP_DATA_75 {
+	if len(data) <= txscript.OP_DATA_75 {
 		instr = append(instr, byte(len(data)))
 	} else if len(data) <= 0xff {
-		instr = append(instr, OP_PUSHDATA1)
+		instr = append(instr, txscript.OP_PUSHDATA1)
 		instr = append(instr, byte(len(data)))
 	} else if len(data) <= 0xffff {
-		instr = append(instr, OP_PUSHDATA2)
+		instr = append(instr, txscript.OP_PUSHDATA2)
 		instr = append(instr, byte(len(data)))
 		instr = append(instr, byte(len(data)>>8))
 	} else {
-		instr = append(instr, OP_PUSHDATA4)
+		instr = append(instr, txscript.OP_PUSHDATA4)
 		// Little-endian length
 		instr = append(instr, byte(len(data)))
 		instr = append(instr, byte(len(data)>>8))
@@ -259,11 +261,11 @@ func TestBodyParsing(t *testing.T) {
 // TestInvalidProtocolIdentifier tests that wrong protocol IDs are rejected
 func TestInvalidProtocolIdentifier(t *testing.T) {
 	var script []byte
-	script = append(script, OP_FALSE)
-	script = append(script, OP_IF)
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_FALSE)
+	script = append(script, txscript.OP_IF)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("foo")...) // Wrong protocol
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	nft, hasNFT := ExtractPkScriptForNFT(script)
 	if hasNFT {
@@ -275,10 +277,10 @@ func TestInvalidProtocolIdentifier(t *testing.T) {
 func TestNoOP_FALSE(t *testing.T) {
 	// OP_IF "ord" OP_ENDIF (missing OP_FALSE)
 	var script []byte
-	script = append(script, OP_IF)
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_IF)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("ord")...)
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	nft, hasNFT := ExtractPkScriptForNFT(script)
 	if hasNFT {
@@ -290,10 +292,10 @@ func TestNoOP_FALSE(t *testing.T) {
 func TestNoOP_IF(t *testing.T) {
 	// OP_FALSE "ord" OP_ENDIF (missing OP_IF)
 	var script []byte
-	script = append(script, OP_FALSE)
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_FALSE)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("ord")...)
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	nft, hasNFT := ExtractPkScriptForNFT(script)
 	if hasNFT {
@@ -318,16 +320,16 @@ func TestPUSHDATA2EmptyStringTagPanic(t *testing.T) {
 	var script []byte
 
 	// OP_FALSE
-	script = append(script, OP_FALSE)
+	script = append(script, txscript.OP_FALSE)
 
 	// OP_IF
-	script = append(script, OP_IF)
+	script = append(script, txscript.OP_IF)
 
 	script = append(script, 0x03)
 	script = append(script, []byte("ord")...)
 
 	// Push pointer tag (0x02)
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x01)
 	script = append(script, 0x00)
 	script = append(script, 0x02)
@@ -337,19 +339,19 @@ func TestPUSHDATA2EmptyStringTagPanic(t *testing.T) {
 	script = append(script, 0x01)
 
 	// Push content type tag (0x01)
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x01)
 	script = append(script, 0x00)
 	script = append(script, 0x01)
 
 	// Push "text/plain"
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x0a)
 	script = append(script, 0x00)
 	script = append(script, []byte("text/plain")...)
 
 	// PUSHDATA2 empty string as body tag
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x00)
 	script = append(script, 0x00)
 
@@ -358,7 +360,7 @@ func TestPUSHDATA2EmptyStringTagPanic(t *testing.T) {
 	script = append(script, []byte("Hello")...)
 
 	// OP_ENDIF
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	nft, hasNFT := firstExtractPkScriptForNFT(script)
 	if !hasNFT {
@@ -384,24 +386,24 @@ func TestPUSHDATA2EmptyStringAsBodyTag(t *testing.T) {
 	var script []byte
 
 	// OP_FALSE
-	script = append(script, OP_FALSE)
+	script = append(script, txscript.OP_FALSE)
 
 	// PUSHDATA2 0x0000 (empty string using PUSHDATA2)
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x00)
 	script = append(script, 0x00)
 
 	// OP_IF
-	script = append(script, OP_IF)
+	script = append(script, txscript.OP_IF)
 
 	// Push "ord" using PUSHDATA2
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x03)
 	script = append(script, 0x00)
 	script = append(script, []byte("ord")...)
 
 	// Push pointer tag (0x02)
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x01)
 	script = append(script, 0x00)
 	script = append(script, 0x02)
@@ -411,19 +413,19 @@ func TestPUSHDATA2EmptyStringAsBodyTag(t *testing.T) {
 	script = append(script, 0x01)
 
 	// Push content type tag (0x01)
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x01)
 	script = append(script, 0x00)
 	script = append(script, 0x01)
 
 	// Push "text/plain"
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x0a)
 	script = append(script, 0x00)
 	script = append(script, []byte("text/plain")...)
 
 	// PUSHDATA2 empty string as body tag
-	script = append(script, OP_PUSHDATA2)
+	script = append(script, txscript.OP_PUSHDATA2)
 	script = append(script, 0x00)
 	script = append(script, 0x00)
 
@@ -432,7 +434,7 @@ func TestPUSHDATA2EmptyStringAsBodyTag(t *testing.T) {
 	script = append(script, []byte("Hello")...)
 
 	// OP_ENDIF
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	nft, hasNFT := firstExtractPkScriptForNFT(script)
 	if !hasNFT {
@@ -481,7 +483,7 @@ func TestJubileeStutteringDetection(t *testing.T) {
 	}{
 		{
 			"double false",
-			append([]byte{OP_FALSE, OP_FALSE}, buildEnvelope()...),
+			append([]byte{txscript.OP_FALSE, txscript.OP_FALSE}, buildEnvelope()...),
 			true,
 			"OP_FALSE OP_FALSE OP_IF ...",
 		},
@@ -489,14 +491,14 @@ func TestJubileeStutteringDetection(t *testing.T) {
 			"false if false",
 			func() []byte {
 				var s []byte
-				s = append(s, OP_FALSE)
-				s = append(s, OP_IF)
-				s = append(s, OP_FALSE)
-				s = append(s, OP_IF)
-				s = append(s, OP_DATA_3)
+				s = append(s, txscript.OP_FALSE)
+				s = append(s, txscript.OP_IF)
+				s = append(s, txscript.OP_FALSE)
+				s = append(s, txscript.OP_IF)
+				s = append(s, txscript.OP_DATA_3)
 				s = append(s, []byte("ord")...)
-				s = append(s, OP_ENDIF)
-				s = append(s, OP_ENDIF)
+				s = append(s, txscript.OP_ENDIF)
+				s = append(s, txscript.OP_ENDIF)
 				return s
 			}(),
 			true,
@@ -523,32 +525,32 @@ func TestJubileeMultipleInscriptions(t *testing.T) {
 	var script []byte
 
 	// First inscription: "foo"
-	script = append(script, OP_FALSE)
-	script = append(script, OP_IF)
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_FALSE)
+	script = append(script, txscript.OP_IF)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("ord")...)
-	script = append(script, OP_DATA_1)
+	script = append(script, txscript.OP_DATA_1)
 	script = append(script, 0x01) // content type
-	script = append(script, OP_DATA_24)
+	script = append(script, txscript.OP_DATA_24)
 	script = append(script, []byte("text/plain;charset=utf-8")...)
 	script = append(script, 0x00) // body tag
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("foo")...)
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	// Second inscription: "bar"
-	script = append(script, OP_FALSE)
-	script = append(script, OP_IF)
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_FALSE)
+	script = append(script, txscript.OP_IF)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("ord")...)
-	script = append(script, OP_DATA_1)
+	script = append(script, txscript.OP_DATA_1)
 	script = append(script, 0x01) // content type
-	script = append(script, OP_DATA_24)
+	script = append(script, txscript.OP_DATA_24)
 	script = append(script, []byte("text/plain;charset=utf-8")...)
 	script = append(script, 0x00) // body tag
-	script = append(script, OP_DATA_3)
+	script = append(script, txscript.OP_DATA_3)
 	script = append(script, []byte("bar")...)
-	script = append(script, OP_ENDIF)
+	script = append(script, txscript.OP_ENDIF)
 
 	nfts := ExtractPkScriptForNFTJubilee(script, nil)
 	if len(nfts) != 2 {
@@ -634,7 +636,7 @@ func TestJubileePushnumOpcodes(t *testing.T) {
 	// Use OP_1 through OP_16 for tag value
 	script := buildEnvelope(
 		pushData([]byte{}), // body tag
-		pushOpcode(OP_1),   // OP_1 as data
+		pushOpcode(txscript.OP_1),
 	)
 
 	nfts := ExtractPkScriptForNFTJubilee(script, nil)

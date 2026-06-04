@@ -3,18 +3,18 @@ package controller
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fractal-indexer/api/lib/midware"
 	"fractal-indexer/api/lib/utils"
-	"fractal-indexer/api/logger"
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
 	"fractal-indexer/api/service/brc20"
+	"fractal-indexer/lib/midware"
+	"fractal-indexer/logger"
 	"net/http"
 	"strconv"
 	"strings"
 
+	swapModel "fractal-indexer/api/lib/brc20_swap/model"
 	"github.com/gin-gonic/gin"
-	swapModel "github.com/unisat-wallet/libbrc20-indexer/model"
 	"go.uber.org/zap"
 )
 
