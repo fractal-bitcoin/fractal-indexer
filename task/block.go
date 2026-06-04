@@ -54,7 +54,7 @@ func ParseBlockSerialStart(nftStartNumber, nftCursedStartNumber int64, block *mo
 	if !valid {
 		model.MissingUTXO = true
 		if !model.SkipMissingUTXO {
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 			return
 		}
 	}
@@ -298,18 +298,18 @@ func RemoveBlocksForReorg(startBlockHeight uint32) bool {
 			removeSlice = append(removeSlice, k)
 		}
 		if ok := rdbUtils.UpdateUtxoInPikaDel(removeSlice); !ok {
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 			return
 		}
 		// Add the new UTXOs first, then delete the old UTXOs.
 		if ok := rdbUtils.UpdateUtxoInPikaAddRaw(utxoToRestore); !ok {
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 			return
 		}
 		if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
 			constant.TASK_BLOCK_HEIGHT, startBlockHeight-1).Result(); err != nil {
 			logger.Log.Error("RemoveBlocksForReorg failed, HSET block_height err", zap.Error(err))
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 		}
 		logger.Log.Debug("utxo updated")
 	}()
@@ -328,14 +328,14 @@ func RemoveBlocksForReorg(startBlockHeight uint32) bool {
 		pipe.HSet(ctx, constant.TASK_INFO_KEYNAME, constant.TASK_NFT_ID, startBlockHeight-1)
 		if _, err := pipe.Exec(ctx); err != nil {
 			logger.Log.Error("pika nft id exec failed", zap.Error(err))
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 		}
 		logger.Log.Debug("inscription id removed")
 	}()
 
 	wg.Wait()
 
-	if model.NeedStop {
+	if model.NeedStop.Load() {
 		return false
 	}
 
@@ -344,7 +344,7 @@ func RemoveBlocksForReorg(startBlockHeight uint32) bool {
 		constant.TASK_REVERT_LAST_HEIGHT, startBlockHeight,
 		constant.TASK_REVERT_HEIGHT, startBlockHeight-1).Result(); err != nil {
 		logger.Log.Error("RemoveBlocksForReorg failed, HSET block_height err", zap.Error(err))
-		model.NeedStop = true
+		model.NeedStop.Store(true)
 	} else {
 		// If current ClickHouse data exceeds revert_height, delete it directly back to revert_height.
 		// Pika data should normally never exceed revert_height.
@@ -354,9 +354,9 @@ func RemoveBlocksForReorg(startBlockHeight uint32) bool {
 		constant.TASK_REVERT_LAST_HEIGHT, startBlockHeight-1,
 		constant.TASK_REVERT_HEIGHT, startBlockHeight-1).Result(); err != nil {
 		logger.Log.Error("RemoveBlocksForReorg failed, HSET block_height err", zap.Error(err))
-		model.NeedStop = true
+		model.NeedStop.Store(true)
 	}
-	if model.NeedStop {
+	if model.NeedStop.Load() {
 		return false
 	}
 
@@ -371,12 +371,12 @@ func SubmitBlocks(isFull bool, stageBlockHeight uint32) {
 	// ── Phase 1: Write-Ahead Revert ──
 	if model.EnableWAL {
 		if ok := store.CommitRevertCk(); !ok {
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 			return
 		}
 		if !isFull {
 			if ok := store.ProcessRevertPartSyncCk(); !ok {
-				model.NeedStop = true
+				model.NeedStop.Store(true)
 				return
 			}
 		}
@@ -385,7 +385,7 @@ func SubmitBlocks(isFull bool, stageBlockHeight uint32) {
 		constant.TASK_REVERT_LAST_HEIGHT, stageBlockHeight,
 		constant.TASK_REVERT_HEIGHT, stageBlockHeight).Result(); err != nil {
 		logger.Log.Error("SubmitBlocks failed, HSET revert_height err", zap.Error(err))
-		model.NeedStop = true
+		model.NeedStop.Store(true)
 		return
 	}
 
@@ -398,7 +398,7 @@ func SubmitBlocks(isFull bool, stageBlockHeight uint32) {
 		defer wg.Done()
 		// Run final processing.
 		if ok := ParseEnd(isFull); !ok {
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 			return
 		}
 		if model.EnableWAL {
@@ -412,18 +412,18 @@ func SubmitBlocks(isFull bool, stageBlockHeight uint32) {
 		defer wg.Done()
 
 		if ok := rdbUtils.UpdateUtxoInPikaDel(model.GlobalDeleteUtxoKeysMap); !ok {
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 			return
 		}
 
 		if ok := rdbUtils.UpdateUtxoInPikaAdd(model.GlobalNewUtxoDataMap); !ok {
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 			return
 		}
 
 		if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME, constant.TASK_BLOCK_HEIGHT, stageBlockHeight).Result(); err != nil {
 			logger.Log.Error("SubmitBlocks failed, HSET block_height err", zap.Error(err))
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 		}
 		logger.Log.Debug("utxo updated")
 	}()
@@ -435,7 +435,7 @@ func SubmitBlocks(isFull bool, stageBlockHeight uint32) {
 		if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
 			constant.TASK_NFT_ID, stageBlockHeight).Result(); err != nil {
 			logger.Log.Error("pika nft id height update failed", zap.Error(err))
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 		}
 		logger.Log.Debug("inscription id updated")
 	}()

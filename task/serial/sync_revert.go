@@ -48,7 +48,7 @@ func SyncBlockRevert(block *model.Block) {
 				zap.Uint32("height", height),
 				zap.Error(err),
 			)
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 		}
 	}
 
@@ -78,7 +78,7 @@ func SyncBlockRevert(block *model.Block) {
 					zap.Uint32("height", height),
 					zap.Error(err),
 				)
-				model.NeedStop = true
+				model.NeedStop.Store(true)
 			}
 		}
 	}
@@ -99,7 +99,7 @@ func SyncBlockRevert(block *model.Block) {
 				zap.Uint32("height", height),
 				zap.Error(err),
 			)
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 		}
 	}
 }

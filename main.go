@@ -141,7 +141,7 @@ func syncBlock() {
 
 	// Scan blocks.
 	for {
-		if model.NeedStop { // Stop when shutdown was requested.
+		if model.NeedStop.Load() { // Stop when shutdown was requested.
 			break
 		}
 
@@ -226,7 +226,7 @@ func syncBlock() {
 		if !model.SkipMissingUTXO && model.MissingUTXO {
 			break
 		}
-		if model.NeedStop { // Stop when shutdown or an error requested it.
+		if model.NeedStop.Load() { // Stop when shutdown or an error requested it.
 			break
 		}
 
@@ -278,7 +278,7 @@ func waitUntilNewBlocksExceedLag(commonHeight, newBlocks uint32) {
 	// Wait until the actual RPC tip has more blocks after the common block
 	// than the configured sync lag.
 	for {
-		if model.NeedStop {
+		if model.NeedStop.Load() {
 			break
 		}
 
@@ -367,7 +367,7 @@ func main() {
 	}
 
 	////////////////
-	if model.NeedStop {
+	if model.NeedStop.Load() {
 		os.Exit(1)
 	}
 }
@@ -393,5 +393,5 @@ func isAPIArg(args []string) bool {
 
 func triggerStop() {
 	logger.Log.Info("program exit...")
-	model.NeedStop = true
+	model.NeedStop.Store(true)
 }
