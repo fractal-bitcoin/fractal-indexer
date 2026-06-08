@@ -41,6 +41,7 @@ var (
 	listen_address         = os.Getenv("LISTEN")
 	basePath               = os.Getenv("BASE_PATH")
 	disableBRC20Process    = os.Getenv("DISABLE_BRC20_PROCESS")
+	apiMetricsOnly         = os.Getenv("API_METRICS_ONLY")
 	dumpBRC20Process       = os.Getenv("DUMP_BRC20_DATA")
 	listenBeforeBrc20Ready = os.Getenv("LISTEN_BEFORE_BRC20_PROCESS")
 	heightBRC20Process     = os.Getenv("BRC20_PROCESS_BEFORE_HEIGHT")
@@ -62,6 +63,11 @@ var (
 )
 
 func initConfig() {
+	if apiMetricsOnly == "true" || apiMetricsOnly == "1" {
+		disableBRC20Process = "true"
+		listenBeforeBrc20Ready = "true"
+	}
+
 	viper.SetConfigFile("conf/api/conf.yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
@@ -461,6 +467,7 @@ func Run() {
 	// 5d ticker holder
 	go func() {
 		midware.ServiceMetrics.Inc("brc20_5d_holder", "task")
+		defer midware.ServiceMetrics.Dec("brc20_5d_holder", "task")
 
 		if disableBRC20Process == "true" {
 			return
