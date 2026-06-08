@@ -16,6 +16,15 @@ const (
 var ORDINALS_INSCRIPTION_COUNTS_BY_HEIGHT = "nft_counts"               // zser: nft counts -> height
 var ORDINALS_INSCRIPTION_CURSED_COUNTS_BY_HEIGHT = "nft_cursed_counts" // zser: nft counts -> height
 
+const (
+	BlockMetricTxWithWitness uint32 = iota + 1
+	BlockMetricTxWithOpReturn
+	BlockMetricTxWithInscription
+	BlockMetricTxWithRunesRunestone
+	BlockMetricTxWithRunesEtching
+	BlockMetricTxWithTacit
+)
+
 var (
 	ZIP_INSCRIPTIONS_MAX_COUNT   = 10000
 	ZSET_INSCRIPTION_MIN_SATOSHI = uint64(10000)

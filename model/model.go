@@ -227,6 +227,7 @@ type ProcessBlock struct {
 	NewInscriptions      []*NewInscriptionInfo // index: createBlockNFTIndex;  nft: IncriptionID
 	NewEventInscriptions []*NewInscriptionInfo
 	NftTransferCount     int // total inscription transfers (including stripped/dropped)
+	BlockMetrics         map[uint32]uint32
 
 	// Prefetched and deserialized UTXO data from Redis, populated in parallel stage.
 	SpentUtxoPrefetch map[string]*TxoData

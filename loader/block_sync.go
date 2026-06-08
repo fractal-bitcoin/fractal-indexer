@@ -133,18 +133,22 @@ func GetBestBlockHeightFromRedis() (height int, err error) {
 }
 
 func GetBestBlockIdFromRedis() (blockId string, err error) {
+	return GetInfoStringFromRedis(constant.TASK_BLOCK)
+}
+
+func GetInfoStringFromRedis(field string) (value string, err error) {
 	// get decimal from f info
 	ctx := context.Background()
-	blockId, err = rdb.RdbClient.HGet(ctx, constant.TASK_INFO_KEYNAME, constant.TASK_BLOCK).Result()
+	value, err = rdb.RdbClient.HGet(ctx, constant.TASK_INFO_KEYNAME, field).Result()
 	if err == redis.Nil {
-		blockId = ""
-		logger.Log.Info("GetBestBlockIdFromRedis, but info missing")
+		value = ""
+		logger.Log.Info("GetInfoStringFromRedis, but info missing", zap.String("field", field))
 	} else if err != nil {
-		logger.Log.Info("GetBestBlockIdFromRedis, but redis failed", zap.Error(err))
+		logger.Log.Info("GetInfoStringFromRedis, but redis failed", zap.String("field", field), zap.Error(err))
 		return
 	}
 
-	return blockId, nil
+	return value, nil
 }
 
 // GetSpentUTXOFromRevert returns spent UTXOs from the revert table (op=0).

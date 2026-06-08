@@ -1,5 +1,7 @@
 chain_type: Fractal
 skip_missing_utxo: false
+index_mode: full
+metrics_enabled: false
 
 rpc: "http://fractald:16332"
 rpc_auth: "user:password"

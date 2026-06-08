@@ -22,6 +22,11 @@ var ctx = context.Background()
 
 // ParseBlockParallel first analyzes blocks in parallel: different blocks run in parallel, while work within the same block is serial.
 func ParseBlockParallel(block *model.Block) {
+	if model.IsMetricOnly() {
+		parallel.ParseBlockMetricsParallel(block)
+		return
+	}
+
 	// pre-allocate TxoData slab for all outputs in the block
 	totalOuts := 0
 	for i := range block.Txs {
@@ -41,6 +46,14 @@ func ParseBlockParallel(block *model.Block) {
 		// UTXO records created by all txouts.
 		parallel.ParseUpdateNewUtxoInTxParallel(uint32(txIdx), tx, block.ParseData, txoSlab[txoIdx:])
 		txoIdx += int(tx.TxOutCnt)
+	}
+
+	if model.ShouldIndexMetrics() {
+		parallel.ParseBlockMetricsParallel(block)
+	}
+
+	if model.IsMetricOnly() {
+		return
 	}
 
 	// Prefetch spent UTXOs from Redis in parallel with other blocks' goroutines.
@@ -78,6 +91,14 @@ func ParseBlockSerialStart(nftStartNumber, nftCursedStartNumber int64, block *mo
 
 // ParseBlockParallelEnd then processes the block in parallel.
 func ParseBlockParallelEnd(block *model.Block) {
+	if model.ShouldIndexMetrics() {
+		serial.SyncBlockMetrics(block)
+	}
+	if model.IsMetricOnly() {
+		releaseBlockResources(block)
+		return
+	}
+
 	// Update block DB data; depends on txout and txin completion to calculate block fees.
 	serial.SyncBlock(block)
 	// Update NFT event DB data; depends on txout and txin completion.
@@ -97,6 +118,10 @@ func ParseBlockParallelEnd(block *model.Block) {
 		serial.SyncBlockRevert(block)
 	}
 
+	releaseBlockResources(block)
+}
+
+func releaseBlockResources(block *model.Block) {
 	block.Txs = nil
 	block.ParseData = nil
 
@@ -124,7 +149,23 @@ func ParseEnd(isFull bool) bool {
 	if isFull {
 		return store.ProcessAllSyncCk()
 	}
-	return store.ProcessPartSyncCk()
+	if ok := store.ProcessPartSyncCk(); !ok {
+		return false
+	}
+	if model.ShouldIndexMetrics() {
+		return store.ProcessMetricPartSyncCk()
+	}
+	return true
+}
+
+func ParseMetricEnd(isFull bool) bool {
+	if ok := store.CommitMetricCk(); !ok {
+		return false
+	}
+	if isFull {
+		return true
+	}
+	return store.ProcessMetricPartSyncCk()
 }
 
 // CheckAndRecover checks height consistency across all stores.
@@ -400,6 +441,15 @@ func RemoveBlocksForReorg(startBlockHeight uint32) bool {
 		return false
 	}
 
+	if model.ShouldIndexMetrics() {
+		if !store.RemoveOrphanMetricPartSyncCk(startBlockHeight) {
+			logger.Log.Error("RemoveBlocksForReorg failed, remove metric data failed",
+				zap.Uint32("height", startBlockHeight))
+			model.NeedStop.Store(true)
+			return false
+		}
+	}
+
 	// Clear DB; make sure this deletion happens last.
 	if _, err := rdb.RdbClient.HMSet(ctx, constant.TASK_INFO_KEYNAME,
 		constant.TASK_REVERT_LAST_HEIGHT, startBlockHeight,
@@ -426,6 +476,29 @@ func RemoveBlocksForReorg(startBlockHeight uint32) bool {
 		return false
 	}
 
+	return true
+}
+
+func RemoveMetricBlocksForReorg(startBlockHeight uint32, commonBlockID string) bool {
+	if !store.RemoveOrphanMetricPartSyncCk(startBlockHeight) {
+		logger.Log.Error("RemoveMetricBlocksForReorg failed, remove metric data failed",
+			zap.Uint32("height", startBlockHeight))
+		model.NeedStop.Store(true)
+		return false
+	}
+
+	metricHeight := uint32(0)
+	if startBlockHeight > 0 {
+		metricHeight = startBlockHeight - 1
+	}
+	if _, err := rdb.RdbClient.HMSet(ctx, constant.TASK_INFO_KEYNAME,
+		constant.TASK_METRIC_HEIGHT, metricHeight,
+		constant.TASK_METRIC_BLOCK, commonBlockID,
+	).Result(); err != nil {
+		logger.Log.Error("RemoveMetricBlocksForReorg failed, HSET metric height err", zap.Error(err))
+		model.NeedStop.Store(true)
+		return false
+	}
 	return true
 }
 
@@ -516,5 +589,30 @@ func SubmitBlocks(isFull bool, stageBlockHeight uint32) bool {
 	// Clear local map memory.
 	model.SnapshotBatchSizes()
 	model.CleanUtxoMap()
+	return true
+}
+
+func SubmitMetricBlocks(isFull bool, stageBlockHeight uint32, stageBlockID []byte) bool {
+	if ok := ParseMetricEnd(isFull); !ok {
+		model.NeedStop.Store(true)
+		return false
+	}
+
+	if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
+		constant.TASK_METRIC_HEIGHT, stageBlockHeight).Result(); err != nil {
+		logger.Log.Error("SubmitMetricBlocks failed, HSET metric_height err", zap.Error(err))
+		model.NeedStop.Store(true)
+		return false
+	}
+
+	if len(stageBlockID) == 32 {
+		if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
+			constant.TASK_METRIC_BLOCK, utils.HashString(stageBlockID),
+		).Result(); err != nil {
+			logger.Log.Error("SubmitMetricBlocks failed, HSET metric_block err", zap.Error(err))
+			model.NeedStop.Store(true)
+			return false
+		}
+	}
 	return true
 }
