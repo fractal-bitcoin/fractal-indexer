@@ -160,7 +160,7 @@ func decodeRunestoneIntegers(data []byte) ([]runestoneInteger, bool) {
 func decodeRunestoneVarint128(data []byte) (runestoneInteger, int) {
 	var value runestoneInteger
 	for i, b := range data {
-		if i >= 18 {
+		if i > 18 {
 			return runestoneInteger{}, 0
 		}
 
