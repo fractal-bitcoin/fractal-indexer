@@ -344,6 +344,9 @@ func Run() {
 		reportAPI.GET("/blocks-height-nftin", controller.GetLatestBlocksHeightAndNFTIn)
 		reportAPI.GET("/blocks-height-invalue-range", controller.GetBlocksHeightAndInvalueRange)
 		reportAPI.GET("/blocks-height-nftin-range", controller.GetBlocksHeightAndNFTInRange)
+		reportAPI.GET("/block-metrics-range",
+			cache.CacheByRequestURI(store, 10*time.Second, ops), controller.GetBlockMetricsByHeightRange)
+		reportAPI.GET("/block-metrics-demo", controller.GetBlockMetricsDemo)
 	}
 
 	// brc20 swap

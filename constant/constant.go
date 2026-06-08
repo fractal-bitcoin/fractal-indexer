@@ -23,6 +23,7 @@ const (
 	BlockMetricTxWithRunesRunestone
 	BlockMetricTxWithRunesEtching
 	BlockMetricTxWithTacit
+	BlockMetricTxWithAlkanes
 )
 
 var (

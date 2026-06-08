@@ -232,6 +232,94 @@ func GetLatestBlocksHeightAndNFTIn(size uint32) ([]HeightNFTIn, error) {
 	return ret, nil
 }
 
+type BlockMetricTrendPoint struct {
+	Height         int `json:"height"`
+	Witness        int `json:"witness"`
+	OpReturn       int `json:"opreturn"`
+	Inscription    int `json:"inscription"`
+	RunesRunestone int `json:"runesRunestone"`
+	RunesEtching   int `json:"runesEtching"`
+	Tacit          int `json:"tacit"`
+	Alkanes        int `json:"alkanes"`
+}
+
+const (
+	blockMetricTxWithWitness = iota + 1
+	blockMetricTxWithOpReturn
+	blockMetricTxWithInscription
+	blockMetricTxWithRunesRunestone
+	blockMetricTxWithRunesEtching
+	blockMetricTxWithTacit
+	blockMetricTxWithAlkanes
+)
+
+type blockMetricRow struct {
+	Height int
+	Metric int
+	Value  int
+}
+
+const sqlGetBlockMetricsByHeightRange = `
+SELECT
+	height, metric, sum(value) AS value
+FROM
+	blkmetric_height
+WHERE
+	height >= ? AND height < ?
+GROUP BY
+	height, metric
+ORDER BY
+	height ASC, metric ASC
+`
+
+func GetBlockMetricsByHeightRange(fromHeight, toHeight int) ([]BlockMetricTrendPoint, error) {
+	if toHeight <= fromHeight || fromHeight < 0 {
+		return nil, nil
+	}
+
+	srf := func(rows *sql.Rows) (interface{}, error) {
+		var ret blockMetricRow
+		err := rows.Scan(&ret.Height, &ret.Metric, &ret.Value)
+		return ret, err
+	}
+	rows, err := clickhouse.ScanAll(sqlGetBlockMetricsByHeightRange, srf, fromHeight, toHeight)
+	if err != nil {
+		logger.Log.Error("GetBlockMetricsByHeightRange failed", zap.Error(err), zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
+		return nil, err
+	}
+
+	points := make([]BlockMetricTrendPoint, toHeight-fromHeight)
+	for i := range points {
+		points[i].Height = fromHeight + i
+	}
+	if rows == nil {
+		return points, nil
+	}
+	for _, row := range rows.([]blockMetricRow) {
+		idx := row.Height - fromHeight
+		if idx < 0 || idx >= len(points) {
+			continue
+		}
+		switch row.Metric {
+		case blockMetricTxWithWitness:
+			points[idx].Witness = row.Value
+		case blockMetricTxWithOpReturn:
+			points[idx].OpReturn = row.Value
+		case blockMetricTxWithInscription:
+			points[idx].Inscription = row.Value
+		case blockMetricTxWithRunesRunestone:
+			points[idx].RunesRunestone = row.Value
+		case blockMetricTxWithRunesEtching:
+			points[idx].RunesEtching = row.Value
+		case blockMetricTxWithTacit:
+			points[idx].Tacit = row.Value
+		case blockMetricTxWithAlkanes:
+			points[idx].Alkanes = row.Value
+		}
+	}
+	return points, nil
+}
+
 const sqlGetNFTInByHeightRange = `
 SELECT
 	height, nftin

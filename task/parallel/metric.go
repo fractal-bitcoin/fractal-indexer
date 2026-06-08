@@ -7,7 +7,7 @@ import (
 )
 
 func ParseBlockMetricsParallel(block *model.Block) {
-	metrics := make(map[uint32]uint32, 6)
+	metrics := make(map[uint32]uint32, 7)
 	for txIdx := range block.Txs {
 		tx := &block.Txs[txIdx]
 
@@ -32,6 +32,7 @@ func ParseBlockMetricsParallel(block *model.Block) {
 		hasOpReturn := false
 		hasRunestone := false
 		hasEtching := false
+		hasAlkanes := false
 		for outIdx := range tx.TxOuts {
 			pkScript := tx.TxOuts[outIdx].PkScript
 			if !hasOpReturn && scriptDecoder.IsOpreturn(pkScript) {
@@ -43,6 +44,9 @@ func ParseBlockMetricsParallel(block *model.Block) {
 			if !hasEtching && scriptDecoder.IsRunesEtching(pkScript) {
 				hasEtching = true
 			}
+			if !hasAlkanes && scriptDecoder.IsAlkanes(pkScript) {
+				hasAlkanes = true
+			}
 		}
 		if hasOpReturn {
 			metrics[constant.BlockMetricTxWithOpReturn]++
@@ -52,6 +56,9 @@ func ParseBlockMetricsParallel(block *model.Block) {
 		}
 		if hasEtching {
 			metrics[constant.BlockMetricTxWithRunesEtching]++
+		}
+		if hasAlkanes {
+			metrics[constant.BlockMetricTxWithAlkanes]++
 		}
 	}
 	block.ParseData.BlockMetrics = metrics

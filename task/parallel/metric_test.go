@@ -33,6 +33,12 @@ func TestParseBlockMetricsParallel(t *testing.T) {
 					{PkScript: []byte{0x51}},
 				},
 			},
+			{
+				TxOuts: []model.TxOut{
+					{PkScript: metricTestAlkanesScript()},
+					{PkScript: metricTestAlkanesScript()},
+				},
+			},
 		},
 		ParseData: &model.ProcessBlock{},
 	}
@@ -41,10 +47,11 @@ func TestParseBlockMetricsParallel(t *testing.T) {
 
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithWitness, 2)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithInscription, 1)
-	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithOpReturn, 2)
-	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithRunesRunestone, 1)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithOpReturn, 3)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithRunesRunestone, 2)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithRunesEtching, 1)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithTacit, 1)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithAlkanes, 1)
 }
 
 func assertMetric(t *testing.T, metrics map[uint32]uint32, metric, want uint32) {
@@ -69,4 +76,8 @@ func metricTestTacitWitness() []byte {
 	witness = append(witness, leafScript...)
 	witness = append(witness, 0x01, 0xc0)
 	return witness
+}
+
+func metricTestAlkanesScript() []byte {
+	return []byte{0x6a, 0x5d, 0x04, 0xff, 0x7f, 0x01, 0x00}
 }
