@@ -103,6 +103,18 @@ func initIndexer() {
 		model.MetricsEnabled = true
 		model.EnableWAL = false
 	}
+	if viper.IsSet("block_decode_concurrency") {
+		blockDecodeConcurrency := viper.GetInt("block_decode_concurrency")
+		if blockDecodeConcurrency < 1 {
+			logger.Log.Warn("invalid block_decode_concurrency, use default",
+				zap.Int("configured", blockDecodeConcurrency),
+				zap.Int("default", model.BlockDecodeConcurrency))
+		} else {
+			model.BlockDecodeConcurrency = blockDecodeConcurrency
+		}
+	}
+	logger.Log.Info("block decode concurrency configured",
+		zap.Int("concurrency", model.BlockDecodeConcurrency))
 
 	constant.ORDINALS_ACTIVATION_HEIGHT = viper.GetUint32("ordinals_activation_height")
 	constant.JUBILEE_ACTIVATION_HEIGHT = viper.GetUint32("jubilee_activation_height")

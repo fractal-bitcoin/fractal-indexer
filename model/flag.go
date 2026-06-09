@@ -15,6 +15,7 @@ const (
 
 var IndexMode = IndexModeFull
 var MetricsEnabled bool = false
+var BlockDecodeConcurrency = 8
 
 func IsMetricOnly() bool {
 	return IndexMode == IndexModeMetricOnly

@@ -15,10 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	blockDecodeConcurrency = 8
-)
-
 type Blockchain struct {
 	Blocks                map[string]*model.BlockIndex     // Synced blocks
 	BlocksOfChainById     map[string]struct{}              // blkid main-chain check, fetched from RPC; only contains 100 blocks before and 500 blocks after the latest locally synced height
@@ -65,7 +61,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksReady chan *model.Bloc
 		endBlockHeight = blocksTotal
 	}
 
-	blockLimit := make(chan struct{}, blockDecodeConcurrency)
+	blockLimit := make(chan struct{}, model.BlockDecodeConcurrency)
 
 	parseBlock := func(blockInfo *model.BlockIndexInfo) bool {
 		blockLimit <- struct{}{}
