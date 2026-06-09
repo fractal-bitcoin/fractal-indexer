@@ -95,35 +95,50 @@ func GetLatestBlocksHeightAndInvalue(c *gin.Context) {
 
 const maxBlockMetricRange = 10000
 
-func parseMetricHeightRange(c *gin.Context) (int, int, bool) {
+func parseMetricHeightRange(c *gin.Context) (int, int, int, bool) {
 	fromHeightStr := c.DefaultQuery("fromHeight", "0")
 	toHeightStr := c.DefaultQuery("toHeight", "0")
+	intervalStr := c.DefaultQuery("interval", "10")
 
 	fromHeight, err := strconv.Atoi(fromHeightStr)
 	if err != nil {
 		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "invalid fromHeight", Data: nil})
-		return 0, 0, false
+		return 0, 0, 0, false
 	}
 	toHeight, err := strconv.Atoi(toHeightStr)
 	if err != nil {
 		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "invalid toHeight", Data: nil})
-		return 0, 0, false
+		return 0, 0, 0, false
+	}
+	interval, err := strconv.Atoi(intervalStr)
+	if err != nil || !isBlockMetricIntervalAllowed(interval) {
+		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "invalid interval", Data: nil})
+		return 0, 0, 0, false
 	}
 	if fromHeight < 0 || toHeight <= fromHeight || toHeight-fromHeight > maxBlockMetricRange {
 		logger.Log.Info("invalid metric height range", zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
 		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "invalid fromHeight or toHeight", Data: nil})
-		return 0, 0, false
+		return 0, 0, 0, false
 	}
-	return fromHeight, toHeight, true
+	return fromHeight, toHeight, interval, true
+}
+
+func isBlockMetricIntervalAllowed(interval int) bool {
+	switch interval {
+	case 1, 10, 20, 50, 100, 500:
+		return true
+	default:
+		return false
+	}
 }
 
 func GetBlockMetricsByHeightRange(c *gin.Context) {
-	fromHeight, toHeight, ok := parseMetricHeightRange(c)
+	fromHeight, toHeight, interval, ok := parseMetricHeightRange(c)
 	if !ok {
 		return
 	}
 
-	points, err := service.GetBlockMetricsByHeightRange(fromHeight, toHeight)
+	points, err := service.GetBlockMetricsByHeightRange(fromHeight, toHeight, interval)
 	if err != nil {
 		logger.Log.Error("GetBlockMetricsByHeightRange failed", zap.Error(err), zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
 		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "failed", Data: nil})
@@ -133,12 +148,12 @@ func GetBlockMetricsByHeightRange(c *gin.Context) {
 }
 
 func GetBlockMetricsDemo(c *gin.Context) {
-	fromHeight, toHeight, ok := parseMetricHeightRange(c)
+	fromHeight, toHeight, interval, ok := parseMetricHeightRange(c)
 	if !ok {
 		return
 	}
 
-	points, err := service.GetBlockMetricsByHeightRange(fromHeight, toHeight)
+	points, err := service.GetBlockMetricsByHeightRange(fromHeight, toHeight, interval)
 	if err != nil {
 		logger.Log.Error("GetBlockMetricsDemo failed", zap.Error(err), zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
 		c.String(http.StatusInternalServerError, "failed")
@@ -156,6 +171,7 @@ func GetBlockMetricsDemo(c *gin.Context) {
 	if err := tmpl.Execute(c.Writer, gin.H{
 		"FromHeight": fromHeight,
 		"ToHeight":   toHeight,
+		"Interval":   interval,
 		"PointsJSON": template.JS(pointsJSON),
 	}); err != nil {
 		logger.Log.Error("render block metrics demo failed", zap.Error(err))
@@ -170,7 +186,8 @@ const blockMetricsDemoHTML = `<!doctype html>
 	<style>
 		body { margin: 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1f2933; }
 		.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
-		input { width: 120px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+		input, select { width: 120px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+		select { width: 90px; }
 		input[type="checkbox"] { width: auto; }
 		button { padding: 7px 12px; border: 1px solid #334155; border-radius: 4px; background: #334155; color: #fff; cursor: pointer; }
 		.controls { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; font-size: 13px; }
@@ -185,6 +202,15 @@ const blockMetricsDemoHTML = `<!doctype html>
 	<form class="toolbar" method="get">
 		<label>from <input name="fromHeight" value="{{.FromHeight}}"></label>
 		<label>to <input name="toHeight" value="{{.ToHeight}}"></label>
+		<label>interval
+			<select name="interval">
+				<option value="10" {{if eq .Interval 10}}selected{{end}}>10</option>
+				<option value="20" {{if eq .Interval 20}}selected{{end}}>20</option>
+				<option value="50" {{if eq .Interval 50}}selected{{end}}>50</option>
+				<option value="100" {{if eq .Interval 100}}selected{{end}}>100</option>
+				<option value="500" {{if eq .Interval 500}}selected{{end}}>500</option>
+			</select>
+		</label>
 		<button type="submit">Load</button>
 	</form>
 	<div id="controls" class="controls">
@@ -288,7 +314,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 		if (points.length > 0) {
 			ctx.fillStyle = "#52606d";
 			ctx.fillText(String(points[0].height), pad.left, h - 12);
-			ctx.fillText(String(points[points.length - 1].height), w - pad.right - 70, h - 12);
+			ctx.fillText(String(points[points.length - 1].toHeight), w - pad.right - 70, h - 12);
 		}
 		renderSummary();
 	}

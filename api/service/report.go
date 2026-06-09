@@ -234,6 +234,7 @@ func GetLatestBlocksHeightAndNFTIn(size uint32) ([]HeightNFTIn, error) {
 
 type BlockMetricTrendPoint struct {
 	Height         int `json:"height"`
+	ToHeight       int `json:"toHeight"`
 	TxCount        int `json:"txCount"`
 	Witness        int `json:"witness"`
 	OpReturn       int `json:"opreturn"`
@@ -255,75 +256,84 @@ const (
 )
 
 type blockMetricRow struct {
-	Height int
+	Bucket int
 	Metric int
 	Value  int
 }
 
 type blockTxCountRow struct {
-	Height  int
+	Bucket  int
 	TxCount int
 }
 
 const sqlGetBlockMetricsByHeightRange = `
 SELECT
-	height, metric, sum(value) AS value
+	intDiv(height - ?, ?) AS bucket, metric, sum(value) AS value
 FROM
 	blkmetric_height
 WHERE
 	height >= ? AND height < ?
 GROUP BY
-	height, metric
+	bucket, metric
 ORDER BY
-	height ASC, metric ASC
+	bucket ASC, metric ASC
 `
 
 const sqlGetBlockTxCountByHeightRange = `
 SELECT
-	height, ntx
+	intDiv(height - ?, ?) AS bucket, sum(ntx) AS ntx
 FROM
 	blk_height
 WHERE
 	height >= ? AND height < ?
+GROUP BY
+	bucket
 ORDER BY
-	height ASC
+	bucket ASC
 `
 
-func GetBlockMetricsByHeightRange(fromHeight, toHeight int) ([]BlockMetricTrendPoint, error) {
+func GetBlockMetricsByHeightRange(fromHeight, toHeight, interval int) ([]BlockMetricTrendPoint, error) {
 	if toHeight <= fromHeight || fromHeight < 0 {
 		return nil, nil
+	}
+	if interval <= 0 {
+		interval = 1
 	}
 
 	srf := func(rows *sql.Rows) (interface{}, error) {
 		var ret blockMetricRow
-		err := rows.Scan(&ret.Height, &ret.Metric, &ret.Value)
+		err := rows.Scan(&ret.Bucket, &ret.Metric, &ret.Value)
 		return ret, err
 	}
-	rows, err := clickhouse.ScanAll(sqlGetBlockMetricsByHeightRange, srf, fromHeight, toHeight)
+	rows, err := clickhouse.ScanAll(sqlGetBlockMetricsByHeightRange, srf, fromHeight, interval, fromHeight, toHeight)
 	if err != nil {
 		logger.Log.Error("GetBlockMetricsByHeightRange failed", zap.Error(err), zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
 		return nil, err
 	}
 
-	points := make([]BlockMetricTrendPoint, toHeight-fromHeight)
+	pointCount := (toHeight - fromHeight + interval - 1) / interval
+	points := make([]BlockMetricTrendPoint, pointCount)
 	for i := range points {
-		points[i].Height = fromHeight + i
+		points[i].Height = fromHeight + i*interval
+		points[i].ToHeight = points[i].Height + interval
+		if points[i].ToHeight > toHeight {
+			points[i].ToHeight = toHeight
+		}
 	}
 
 	txRows, err := clickhouse.ScanAll(sqlGetBlockTxCountByHeightRange, func(rows *sql.Rows) (interface{}, error) {
 		var ret blockTxCountRow
-		err := rows.Scan(&ret.Height, &ret.TxCount)
+		err := rows.Scan(&ret.Bucket, &ret.TxCount)
 		return ret, err
-	}, fromHeight, toHeight)
+	}, fromHeight, interval, fromHeight, toHeight)
 	if err != nil {
 		logger.Log.Error("GetBlockMetricsByHeightRange tx count failed", zap.Error(err), zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
 		return nil, err
 	}
 	if txRows != nil {
 		for _, row := range txRows.([]blockTxCountRow) {
-			idx := row.Height - fromHeight
-			if idx >= 0 && idx < len(points) {
-				points[idx].TxCount = row.TxCount
+			if row.Bucket >= 0 && row.Bucket < len(points) {
+				points[row.Bucket].TxCount = row.TxCount
 			}
 		}
 	}
@@ -332,25 +342,24 @@ func GetBlockMetricsByHeightRange(fromHeight, toHeight int) ([]BlockMetricTrendP
 		return points, nil
 	}
 	for _, row := range rows.([]blockMetricRow) {
-		idx := row.Height - fromHeight
-		if idx < 0 || idx >= len(points) {
+		if row.Bucket < 0 || row.Bucket >= len(points) {
 			continue
 		}
 		switch row.Metric {
 		case blockMetricTxWithWitness:
-			points[idx].Witness = row.Value
+			points[row.Bucket].Witness = row.Value
 		case blockMetricTxWithOpReturn:
-			points[idx].OpReturn = row.Value
+			points[row.Bucket].OpReturn = row.Value
 		case blockMetricTxWithInscription:
-			points[idx].Inscription = row.Value
+			points[row.Bucket].Inscription = row.Value
 		case blockMetricTxWithRunesRunestone:
-			points[idx].RunesRunestone = row.Value
+			points[row.Bucket].RunesRunestone = row.Value
 		case blockMetricTxWithRunesEtching:
-			points[idx].RunesEtching = row.Value
+			points[row.Bucket].RunesEtching = row.Value
 		case blockMetricTxWithTacit:
-			points[idx].Tacit = row.Value
+			points[row.Bucket].Tacit = row.Value
 		case blockMetricTxWithAlkanes:
-			points[idx].Alkanes = row.Value
+			points[row.Bucket].Alkanes = row.Value
 		}
 	}
 	return points, nil
