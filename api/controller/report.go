@@ -93,7 +93,10 @@ func GetLatestBlocksHeightAndInvalue(c *gin.Context) {
 	c.JSON(http.StatusOK, model.Response{Code: 0, Msg: "ok", Data: resp})
 }
 
-const maxBlockMetricRange = 10000
+const (
+	maxBlockMetricRange       = 400000
+	randomBlockMetricMaxRange = 10000
+)
 
 func parseMetricHeightRange(c *gin.Context) (int, int, int, bool) {
 	fromHeightStr := c.DefaultQuery("fromHeight", "0")
@@ -175,11 +178,13 @@ func GetBlockMetricsDemo(c *gin.Context) {
 	tmpl := template.Must(template.New("block-metrics-demo").Parse(blockMetricsDemoHTML))
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.Execute(c.Writer, gin.H{
-		"FromHeight":     fromHeight,
-		"ToHeight":       toHeight,
-		"Interval":       interval,
-		"MaxKnownHeight": maxKnownHeight,
-		"PointsJSON":     template.JS(pointsJSON),
+		"FromHeight":             fromHeight,
+		"ToHeight":               toHeight,
+		"Interval":               interval,
+		"MaxKnownHeight":         maxKnownHeight,
+		"MaxBlockMetricRange":    maxBlockMetricRange,
+		"RandomBlockMetricRange": randomBlockMetricMaxRange,
+		"PointsJSON":             template.JS(pointsJSON),
 	}); err != nil {
 		logger.Log.Error("render block metrics demo failed", zap.Error(err))
 	}
@@ -197,15 +202,18 @@ const blockMetricsDemoHTML = `<!doctype html>
 		select { width: 90px; }
 		input[type="checkbox"] { width: auto; }
 		button { padding: 7px 12px; border: 1px solid #334155; border-radius: 4px; background: #334155; color: #fff; cursor: pointer; }
+		button:disabled { opacity: .65; cursor: wait; }
 		.controls { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; font-size: 13px; }
 		.controls label { display: inline-flex; align-items: center; gap: 5px; }
 		.swatch { display: inline-block; width: 10px; height: 10px; background: var(--c); }
+		.status { min-height: 18px; margin: -6px 0 10px; font-size: 13px; color: #52606d; }
+		.status.error { color: #dc2626; }
 		.summary { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 14px; font-size: 13px; color: #52606d; }
 		canvas { width: 100%; max-width: 1200px; height: 520px; border: 1px solid #d9e2ec; border-radius: 6px; }
 	</style>
 </head>
 <body>
-	<h2>Block Metrics {{.FromHeight}} - {{.ToHeight}}</h2>
+	<h2 id="title">Block Metrics {{.FromHeight}} - {{.ToHeight}}</h2>
 	<form class="toolbar" method="get">
 		<label>from <input name="fromHeight" value="{{.FromHeight}}"></label>
 		<label>to <input name="toHeight" value="{{.ToHeight}}"></label>
@@ -221,6 +229,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 		<button type="submit">Load</button>
 		<button type="button" id="randomRange">Random</button>
 	</form>
+	<div id="status" class="status"></div>
 	<div id="controls" class="controls">
 		<label><input type="checkbox" data-key="txCount"><span class="swatch" style="--c:#111827"></span>total tx</label>
 		<label><input type="checkbox" data-key="witness"><span class="swatch" style="--c:#2563eb"></span>witness</label>
@@ -235,7 +244,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 	<div id="summary" class="summary"></div>
 	<canvas id="chart" width="1200" height="520"></canvas>
 	<script>
-	const points = {{ .PointsJSON }};
+	let points = {{ .PointsJSON }};
 	const protocolKeys = ["witness", "opreturn", "inscription", "runesRunestone", "runesEtching", "tacit", "alkanes"];
 	const seriesConfig = {
 		txCount: ["Total Tx", "#111827"],
@@ -250,6 +259,8 @@ const blockMetricsDemoHTML = `<!doctype html>
 	};
 	const canvas = document.getElementById("chart");
 	const ctx = canvas.getContext("2d");
+	const title = document.getElementById("title");
+	const status = document.getElementById("status");
 	const summary = document.getElementById("summary");
 	const pad = { left: 58, right: 20, top: 20, bottom: 38 };
 	const w = canvas.width, h = canvas.height;
@@ -259,22 +270,96 @@ const blockMetricsDemoHTML = `<!doctype html>
 	const form = document.querySelector(".toolbar");
 	const fromInput = form.querySelector("input[name='fromHeight']");
 	const toInput = form.querySelector("input[name='toHeight']");
+	const intervalInput = form.querySelector("select[name='interval']");
+	const loadButton = form.querySelector("button[type='submit']");
+	const randomButton = document.getElementById("randomRange");
 	const maxKnownHeight = Number({{.MaxKnownHeight}});
-	function randomizeRange() {
-		const upperBound = Math.max(0, maxKnownHeight);
-		if (upperBound <= 1000) {
-			fromInput.value = "0";
-			toInput.value = String(upperBound);
-			form.submit();
+	const maxBlockMetricRange = Number({{.MaxBlockMetricRange}});
+	const randomBlockMetricMaxRange = Number({{.RandomBlockMetricRange}});
+	function parseInteger(value) {
+		const text = String(value).trim();
+		if (!/^-?\d+$/.test(text)) return null;
+		const n = Number(text);
+		return Number.isSafeInteger(n) ? n : null;
+	}
+	function readRange() {
+		const fromHeight = parseInteger(fromInput.value);
+		if (fromHeight === null) return { error: "invalid fromHeight" };
+		const toHeight = parseInteger(toInput.value);
+		if (toHeight === null) return { error: "invalid toHeight" };
+		const interval = parseInteger(intervalInput.value);
+		if (interval === null) return { error: "invalid interval" };
+		if (fromHeight < 0 || toHeight <= fromHeight || toHeight - fromHeight > maxBlockMetricRange) {
+			return { error: "invalid range: max " + maxBlockMetricRange.toLocaleString() + " blocks" };
+		}
+		return { fromHeight, toHeight, interval };
+	}
+	function setStatus(message, isError) {
+		status.textContent = message || "";
+		status.className = isError ? "status error" : "status";
+	}
+	function setLoading(loading) {
+		loadButton.disabled = loading;
+		randomButton.disabled = loading;
+		if (loading) setStatus("loading...", false);
+	}
+	function updateURL(range) {
+		const url = new URL(window.location.href);
+		url.searchParams.set("fromHeight", String(range.fromHeight));
+		url.searchParams.set("toHeight", String(range.toHeight));
+		url.searchParams.set("interval", String(range.interval));
+		window.history.replaceState(null, "", url);
+	}
+	function updateTitle(range) {
+		title.textContent = "Block Metrics " + range.fromHeight + " - " + range.toHeight;
+	}
+	async function loadMetrics() {
+		const range = readRange();
+		if (range.error) {
+			setStatus(range.error, true);
 			return;
 		}
-		const maxSpan = Math.min(10000, upperBound);
+		setLoading(true);
+		try {
+			const url = new URL(window.location.href);
+			url.pathname = url.pathname.replace(/\/block-metrics-demo$/, "/block-metrics-range");
+			url.searchParams.set("fromHeight", String(range.fromHeight));
+			url.searchParams.set("toHeight", String(range.toHeight));
+			url.searchParams.set("interval", String(range.interval));
+			const response = await fetch(url, { headers: { "Accept": "application/json" } });
+			if (!response.ok) throw new Error("request failed: " + response.status);
+			const body = await response.json();
+			if (!body || body.code !== 0) throw new Error((body && body.msg) || "failed");
+			points = Array.isArray(body.data) ? body.data : [];
+			updateURL(range);
+			updateTitle(range);
+			draw();
+			setStatus("", false);
+		} catch (err) {
+			setStatus(err.message || "failed", true);
+		} finally {
+			setLoading(false);
+		}
+	}
+	function randomizeRange() {
+		const upperBound = Math.max(0, maxKnownHeight);
+		if (upperBound <= 0) {
+			setStatus("no metrics data", true);
+			return;
+		}
+		if (upperBound <= randomBlockMetricMaxRange) {
+			fromInput.value = "0";
+			toInput.value = String(upperBound);
+			loadMetrics();
+			return;
+		}
+		const maxSpan = Math.min(randomBlockMetricMaxRange, upperBound);
 		const span = 1000 + Math.floor(Math.random() * (maxSpan - 999));
 		const maxStart = upperBound - span;
 		const start = Math.floor(Math.random() * (maxStart + 1));
 		fromInput.value = String(start);
 		toInput.value = String(start + span);
-		form.submit();
+		loadMetrics();
 	}
 	function selectedProtocolKeys() {
 		return protocolKeys.filter((key) => document.querySelector("input[data-key='" + key + "']").checked);
@@ -347,7 +432,11 @@ const blockMetricsDemoHTML = `<!doctype html>
 		renderSummary();
 	}
 	checks.forEach((el) => el.addEventListener("change", draw));
-	document.getElementById("randomRange").addEventListener("click", randomizeRange);
+	form.addEventListener("submit", (event) => {
+		event.preventDefault();
+		loadMetrics();
+	});
+	randomButton.addEventListener("click", randomizeRange);
 	draw();
 	</script>
 </body>
