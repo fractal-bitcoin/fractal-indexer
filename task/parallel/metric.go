@@ -7,7 +7,8 @@ import (
 )
 
 func ParseBlockMetricsParallel(block *model.Block) {
-	metrics := make(map[uint32]uint32, 7)
+	metrics := make(map[uint32]uint32, 8)
+	metrics[constant.BlockMetricTxCount] = block.TxCnt
 	for txIdx := range block.Txs {
 		tx := &block.Txs[txIdx]
 

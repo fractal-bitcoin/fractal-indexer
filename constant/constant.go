@@ -16,8 +16,10 @@ const (
 var ORDINALS_INSCRIPTION_COUNTS_BY_HEIGHT = "nft_counts"               // zser: nft counts -> height
 var ORDINALS_INSCRIPTION_CURSED_COUNTS_BY_HEIGHT = "nft_cursed_counts" // zser: nft counts -> height
 
+// Block metric IDs are stored in blkmetric_height and used by both indexer and API.
 const (
-	BlockMetricTxWithWitness uint32 = iota + 1
+	BlockMetricTxCount = iota
+	BlockMetricTxWithWitness
 	BlockMetricTxWithOpReturn
 	BlockMetricTxWithInscription
 	BlockMetricTxWithRunesRunestone

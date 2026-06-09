@@ -10,6 +10,7 @@ import (
 func TestParseBlockMetricsParallel(t *testing.T) {
 	block := &model.Block{
 		Height: 1,
+		TxCnt:  4,
 		Txs: []model.Tx{
 			{
 				WitOffset:         10,
@@ -45,6 +46,7 @@ func TestParseBlockMetricsParallel(t *testing.T) {
 
 	ParseBlockMetricsParallel(block)
 
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxCount, 4)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithWitness, 2)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithInscription, 1)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithOpReturn, 3)

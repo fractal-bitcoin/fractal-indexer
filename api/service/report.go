@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"fractal-indexer/api/constant"
+	apiConstant "fractal-indexer/api/constant"
 	"fractal-indexer/api/dao/clickhouse"
 	"fractal-indexer/api/model"
+	metricConstant "fractal-indexer/constant"
 	"fractal-indexer/logger"
 	"sync"
 
@@ -101,7 +102,7 @@ func GetCoreDataUpToHeight(height int) CoreDataUpToHeight {
 		lastHistory, ok := model.GSwap.FirstHistoryByHeight[uint32(height+1)]
 		if !ok {
 			lastHistory = model.GSwap.HistoryCount
-			if height != constant.MEMPOOL_HEIGHT && model.GSwap.FirstMempoolHistory > 0 {
+			if height != apiConstant.MEMPOOL_HEIGHT && model.GSwap.FirstMempoolHistory > 0 {
 				lastHistory = model.GSwap.FirstMempoolHistory
 			}
 		}
@@ -245,25 +246,10 @@ type BlockMetricTrendPoint struct {
 	Alkanes        int `json:"alkanes"`
 }
 
-const (
-	blockMetricTxWithWitness = iota + 1
-	blockMetricTxWithOpReturn
-	blockMetricTxWithInscription
-	blockMetricTxWithRunesRunestone
-	blockMetricTxWithRunesEtching
-	blockMetricTxWithTacit
-	blockMetricTxWithAlkanes
-)
-
 type blockMetricRow struct {
 	Bucket int
 	Metric int
 	Value  int
-}
-
-type blockTxCountRow struct {
-	Bucket  int
-	TxCount int
 }
 
 const sqlGetBlockMetricsByHeightRange = `
@@ -279,24 +265,11 @@ ORDER BY
 	bucket ASC, metric ASC
 `
 
-const sqlGetBlockTxCountByHeightRange = `
-SELECT
-	intDiv(height - ?, ?) AS bucket, sum(ntx) AS ntx
-FROM
-	blk_height
-WHERE
-	height >= ? AND height < ?
-GROUP BY
-	bucket
-ORDER BY
-	bucket ASC
-`
-
 const sqlGetBlockMetricsMaxKnownHeight = `
 SELECT
 	if(count() = 0, 0, max(height) + 1) AS max_known_height
 FROM
-	blk_height
+	blkmetric_height
 `
 
 func GetBlockMetricsMaxKnownHeight() (int, error) {
@@ -344,23 +317,6 @@ func GetBlockMetricsByHeightRange(fromHeight, toHeight, interval int) ([]BlockMe
 		}
 	}
 
-	txRows, err := clickhouse.ScanAll(sqlGetBlockTxCountByHeightRange, func(rows *sql.Rows) (interface{}, error) {
-		var ret blockTxCountRow
-		err := rows.Scan(&ret.Bucket, &ret.TxCount)
-		return ret, err
-	}, fromHeight, interval, fromHeight, toHeight)
-	if err != nil {
-		logger.Log.Error("GetBlockMetricsByHeightRange tx count failed", zap.Error(err), zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
-		return nil, err
-	}
-	if txRows != nil {
-		for _, row := range txRows.([]blockTxCountRow) {
-			if row.Bucket >= 0 && row.Bucket < len(points) {
-				points[row.Bucket].TxCount = row.TxCount
-			}
-		}
-	}
-
 	if rows == nil {
 		return points, nil
 	}
@@ -369,19 +325,21 @@ func GetBlockMetricsByHeightRange(fromHeight, toHeight, interval int) ([]BlockMe
 			continue
 		}
 		switch row.Metric {
-		case blockMetricTxWithWitness:
+		case metricConstant.BlockMetricTxCount:
+			points[row.Bucket].TxCount = row.Value
+		case metricConstant.BlockMetricTxWithWitness:
 			points[row.Bucket].Witness = row.Value
-		case blockMetricTxWithOpReturn:
+		case metricConstant.BlockMetricTxWithOpReturn:
 			points[row.Bucket].OpReturn = row.Value
-		case blockMetricTxWithInscription:
+		case metricConstant.BlockMetricTxWithInscription:
 			points[row.Bucket].Inscription = row.Value
-		case blockMetricTxWithRunesRunestone:
+		case metricConstant.BlockMetricTxWithRunesRunestone:
 			points[row.Bucket].RunesRunestone = row.Value
-		case blockMetricTxWithRunesEtching:
+		case metricConstant.BlockMetricTxWithRunesEtching:
 			points[row.Bucket].RunesEtching = row.Value
-		case blockMetricTxWithTacit:
+		case metricConstant.BlockMetricTxWithTacit:
 			points[row.Bucket].Tacit = row.Value
-		case blockMetricTxWithAlkanes:
+		case metricConstant.BlockMetricTxWithAlkanes:
 			points[row.Bucket].Alkanes = row.Value
 		}
 	}
