@@ -212,6 +212,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 			</select>
 		</label>
 		<button type="submit">Load</button>
+		<button type="button" id="randomRange">Random</button>
 	</form>
 	<div id="controls" class="controls">
 		<label><input type="checkbox" data-key="txCount"><span class="swatch" style="--c:#111827"></span>total tx</label>
@@ -248,6 +249,30 @@ const blockMetricsDemoHTML = `<!doctype html>
 	const innerW = w - pad.left - pad.right;
 	const innerH = h - pad.top - pad.bottom;
 	const checks = Array.from(document.querySelectorAll("#controls input[type=checkbox]"));
+	const form = document.querySelector(".toolbar");
+	const fromInput = form.querySelector("input[name='fromHeight']");
+	const toInput = form.querySelector("input[name='toHeight']");
+	const intervalSelect = form.querySelector("select[name='interval']");
+	const maxKnownHeight = points.length > 0 ? points[points.length - 1].toHeight : Number(toInput.value || 0);
+	function intervalForSpan(span) {
+		if (span <= 200) return 10;
+		if (span <= 400) return 20;
+		if (span <= 700) return 50;
+		if (span <= 1000) return 100;
+		return 500;
+	}
+	function randomizeRange() {
+		const currentFrom = Math.max(0, Number(fromInput.value || 0));
+		const currentTo = Math.max(currentFrom + 1, Number(toInput.value || currentFrom + 1000));
+		const upperBound = Math.max(maxKnownHeight, currentTo, currentFrom + 1000);
+		const span = 10 + Math.floor(Math.random() * 991);
+		const maxStart = Math.max(0, upperBound - span);
+		const start = Math.floor(Math.random() * (maxStart + 1));
+		fromInput.value = String(start);
+		toInput.value = String(start + span);
+		intervalSelect.value = String(intervalForSpan(span));
+		form.submit();
+	}
 	function selectedProtocolKeys() {
 		return protocolKeys.filter((key) => document.querySelector("input[data-key='" + key + "']").checked);
 	}
@@ -319,6 +344,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 		renderSummary();
 	}
 	checks.forEach((el) => el.addEventListener("change", draw));
+	document.getElementById("randomRange").addEventListener("click", randomizeRange);
 	draw();
 	</script>
 </body>
