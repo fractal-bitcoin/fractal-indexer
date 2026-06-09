@@ -171,9 +171,12 @@ const blockMetricsDemoHTML = `<!doctype html>
 		body { margin: 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1f2933; }
 		.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
 		input { width: 120px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
+		input[type="checkbox"] { width: auto; }
 		button { padding: 7px 12px; border: 1px solid #334155; border-radius: 4px; background: #334155; color: #fff; cursor: pointer; }
-		.legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 12px 0; font-size: 13px; }
-		.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 5px; background: var(--c); }
+		.controls { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; font-size: 13px; }
+		.controls label { display: inline-flex; align-items: center; gap: 5px; }
+		.swatch { display: inline-block; width: 10px; height: 10px; background: var(--c); }
+		.summary { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 14px; font-size: 13px; color: #52606d; }
 		canvas { width: 100%; max-width: 1200px; height: 520px; border: 1px solid #d9e2ec; border-radius: 6px; }
 	</style>
 </head>
@@ -184,72 +187,113 @@ const blockMetricsDemoHTML = `<!doctype html>
 		<label>to <input name="toHeight" value="{{.ToHeight}}"></label>
 		<button type="submit">Load</button>
 	</form>
-	<div class="legend">
-		<span style="--c:#2563eb">witness</span>
-		<span style="--c:#dc2626">opreturn</span>
-		<span style="--c:#16a34a">inscription</span>
-		<span style="--c:#9333ea">runes runestone</span>
-		<span style="--c:#ea580c">runes etching</span>
-		<span style="--c:#0891b2">tacit</span>
-		<span style="--c:#4b5563">alkanes</span>
+	<div id="controls" class="controls">
+		<label><input type="checkbox" data-key="txCount"><span class="swatch" style="--c:#111827"></span>total tx</label>
+		<label><input type="checkbox" data-key="witness"><span class="swatch" style="--c:#2563eb"></span>witness</label>
+		<label><input type="checkbox" data-key="opreturn" checked><span class="swatch" style="--c:#dc2626"></span>opreturn</label>
+		<label><input type="checkbox" data-key="inscription" checked><span class="swatch" style="--c:#16a34a"></span>inscription</label>
+		<label><input type="checkbox" data-key="runesRunestone" checked><span class="swatch" style="--c:#9333ea"></span>runes runestone</label>
+		<label><input type="checkbox" data-key="runesEtching" checked><span class="swatch" style="--c:#ea580c"></span>runes etching</label>
+		<label><input type="checkbox" data-key="tacit" checked><span class="swatch" style="--c:#0891b2"></span>tacit</label>
+		<label><input type="checkbox" data-key="alkanes" checked><span class="swatch" style="--c:#4b5563"></span>alkanes</label>
+		<label><input type="checkbox" data-key="other" checked><span class="swatch" style="--c:#64748b"></span>other</label>
 	</div>
+	<div id="summary" class="summary"></div>
 	<canvas id="chart" width="1200" height="520"></canvas>
 	<script>
 	const points = {{ .PointsJSON }};
-	const series = [
-		["witness", "Witness", "#2563eb"],
-		["opreturn", "OpReturn", "#dc2626"],
-		["inscription", "Inscription", "#16a34a"],
-		["runesRunestone", "Runes Runestone", "#9333ea"],
-		["runesEtching", "Runes Etching", "#ea580c"],
-		["tacit", "Tacit", "#0891b2"],
-		["alkanes", "Alkanes", "#4b5563"],
-	];
+	const protocolKeys = ["witness", "opreturn", "inscription", "runesRunestone", "runesEtching", "tacit", "alkanes"];
+	const seriesConfig = {
+		txCount: ["Total Tx", "#111827"],
+		witness: ["Witness", "#2563eb"],
+		opreturn: ["OpReturn", "#dc2626"],
+		inscription: ["Inscription", "#16a34a"],
+		runesRunestone: ["Runes Runestone", "#9333ea"],
+		runesEtching: ["Runes Etching", "#ea580c"],
+		tacit: ["Tacit", "#0891b2"],
+		alkanes: ["Alkanes", "#4b5563"],
+		other: ["Other", "#64748b"],
+	};
 	const canvas = document.getElementById("chart");
 	const ctx = canvas.getContext("2d");
+	const summary = document.getElementById("summary");
 	const pad = { left: 58, right: 20, top: 20, bottom: 38 };
 	const w = canvas.width, h = canvas.height;
 	const innerW = w - pad.left - pad.right;
 	const innerH = h - pad.top - pad.bottom;
-	let maxY = 1;
-	for (const p of points) for (const [key] of series) maxY = Math.max(maxY, p[key] || 0);
-	ctx.clearRect(0, 0, w, h);
-	ctx.strokeStyle = "#d9e2ec";
-	ctx.lineWidth = 1;
-	ctx.beginPath();
-	ctx.moveTo(pad.left, pad.top);
-	ctx.lineTo(pad.left, h - pad.bottom);
-	ctx.lineTo(w - pad.right, h - pad.bottom);
-	ctx.stroke();
-	ctx.fillStyle = "#52606d";
-	ctx.font = "12px sans-serif";
-	for (let i = 0; i <= 4; i++) {
-		const yVal = Math.round(maxY * i / 4);
-		const y = h - pad.bottom - innerH * i / 4;
-		ctx.fillText(String(yVal), 10, y + 4);
-		ctx.strokeStyle = "#eef2f7";
-		ctx.beginPath();
-		ctx.moveTo(pad.left, y);
-		ctx.lineTo(w - pad.right, y);
-		ctx.stroke();
+	const checks = Array.from(document.querySelectorAll("#controls input[type=checkbox]"));
+	function selectedProtocolKeys() {
+		return protocolKeys.filter((key) => document.querySelector("input[data-key='" + key + "']").checked);
 	}
-	function xAt(i) { return pad.left + (points.length <= 1 ? 0 : innerW * i / (points.length - 1)); }
-	function yAt(v) { return h - pad.bottom - innerH * v / maxY; }
-	for (const [key, , color] of series) {
-		ctx.strokeStyle = color;
-		ctx.lineWidth = 2;
-		ctx.beginPath();
-		points.forEach((p, i) => {
-			const x = xAt(i), y = yAt(p[key] || 0);
-			if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-		});
-		ctx.stroke();
+	function selectedSeries() {
+		return checks.filter((el) => el.checked).map((el) => el.dataset.key);
 	}
-	if (points.length > 0) {
+	function selectedProtocolSum(p) {
+		return selectedProtocolKeys().reduce((sum, key) => sum + (p[key] || 0), 0);
+	}
+	function otherValue(p) {
+		return Math.max(0, (p.txCount || 0) - selectedProtocolSum(p));
+	}
+	function valueOf(p, key) {
+		return key === "other" ? otherValue(p) : (p[key] || 0);
+	}
+	function renderSummary() {
+		const totalTx = points.reduce((sum, p) => sum + (p.txCount || 0), 0);
+		const selected = points.reduce((sum, p) => sum + selectedProtocolSum(p), 0);
+		const other = points.reduce((sum, p) => sum + otherValue(p), 0);
+		const pct = totalTx > 0 ? (other * 100 / totalTx).toFixed(2) : "0.00";
+		summary.innerHTML = [
+			"total tx: " + totalTx.toLocaleString(),
+			"selected protocol tx: " + selected.toLocaleString(),
+			"other: " + other.toLocaleString() + " (" + pct + "%)"
+		].map((text) => "<span>" + text + "</span>").join("");
+	}
+	function draw() {
+		const active = selectedSeries();
+		let maxY = 1;
+		for (const p of points) for (const key of active) maxY = Math.max(maxY, valueOf(p, key));
+		ctx.clearRect(0, 0, w, h);
+		ctx.strokeStyle = "#d9e2ec";
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.moveTo(pad.left, pad.top);
+		ctx.lineTo(pad.left, h - pad.bottom);
+		ctx.lineTo(w - pad.right, h - pad.bottom);
+		ctx.stroke();
 		ctx.fillStyle = "#52606d";
-		ctx.fillText(String(points[0].height), pad.left, h - 12);
-		ctx.fillText(String(points[points.length - 1].height), w - pad.right - 70, h - 12);
+		ctx.font = "12px sans-serif";
+		for (let i = 0; i <= 4; i++) {
+			const yVal = Math.round(maxY * i / 4);
+			const y = h - pad.bottom - innerH * i / 4;
+			ctx.fillText(String(yVal), 10, y + 4);
+			ctx.strokeStyle = "#eef2f7";
+			ctx.beginPath();
+			ctx.moveTo(pad.left, y);
+			ctx.lineTo(w - pad.right, y);
+			ctx.stroke();
+		}
+		function xAt(i) { return pad.left + (points.length <= 1 ? 0 : innerW * i / (points.length - 1)); }
+		function yAt(v) { return h - pad.bottom - innerH * v / maxY; }
+		for (const key of active) {
+			const [label, color] = seriesConfig[key];
+			ctx.strokeStyle = color;
+			ctx.lineWidth = key === "txCount" || key === "other" ? 2.5 : 2;
+			ctx.beginPath();
+			points.forEach((p, i) => {
+				const x = xAt(i), y = yAt(valueOf(p, key));
+				if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+			});
+			ctx.stroke();
+		}
+		if (points.length > 0) {
+			ctx.fillStyle = "#52606d";
+			ctx.fillText(String(points[0].height), pad.left, h - 12);
+			ctx.fillText(String(points[points.length - 1].height), w - pad.right - 70, h - 12);
+		}
+		renderSummary();
 	}
+	checks.forEach((el) => el.addEventListener("change", draw));
+	draw();
 	</script>
 </body>
 </html>`

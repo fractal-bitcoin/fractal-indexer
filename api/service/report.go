@@ -234,6 +234,7 @@ func GetLatestBlocksHeightAndNFTIn(size uint32) ([]HeightNFTIn, error) {
 
 type BlockMetricTrendPoint struct {
 	Height         int `json:"height"`
+	TxCount        int `json:"txCount"`
 	Witness        int `json:"witness"`
 	OpReturn       int `json:"opreturn"`
 	Inscription    int `json:"inscription"`
@@ -259,6 +260,11 @@ type blockMetricRow struct {
 	Value  int
 }
 
+type blockTxCountRow struct {
+	Height  int
+	TxCount int
+}
+
 const sqlGetBlockMetricsByHeightRange = `
 SELECT
 	height, metric, sum(value) AS value
@@ -270,6 +276,17 @@ GROUP BY
 	height, metric
 ORDER BY
 	height ASC, metric ASC
+`
+
+const sqlGetBlockTxCountByHeightRange = `
+SELECT
+	height, ntx
+FROM
+	blk_height
+WHERE
+	height >= ? AND height < ?
+ORDER BY
+	height ASC
 `
 
 func GetBlockMetricsByHeightRange(fromHeight, toHeight int) ([]BlockMetricTrendPoint, error) {
@@ -292,6 +309,25 @@ func GetBlockMetricsByHeightRange(fromHeight, toHeight int) ([]BlockMetricTrendP
 	for i := range points {
 		points[i].Height = fromHeight + i
 	}
+
+	txRows, err := clickhouse.ScanAll(sqlGetBlockTxCountByHeightRange, func(rows *sql.Rows) (interface{}, error) {
+		var ret blockTxCountRow
+		err := rows.Scan(&ret.Height, &ret.TxCount)
+		return ret, err
+	}, fromHeight, toHeight)
+	if err != nil {
+		logger.Log.Error("GetBlockMetricsByHeightRange tx count failed", zap.Error(err), zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
+		return nil, err
+	}
+	if txRows != nil {
+		for _, row := range txRows.([]blockTxCountRow) {
+			idx := row.Height - fromHeight
+			if idx >= 0 && idx < len(points) {
+				points[idx].TxCount = row.TxCount
+			}
+		}
+	}
+
 	if rows == nil {
 		return points, nil
 	}
