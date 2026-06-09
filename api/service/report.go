@@ -292,6 +292,29 @@ ORDER BY
 	bucket ASC
 `
 
+const sqlGetBlockMetricsMaxKnownHeight = `
+SELECT
+	if(count() = 0, 0, max(height) + 1) AS max_known_height
+FROM
+	blk_height
+`
+
+func GetBlockMetricsMaxKnownHeight() (int, error) {
+	ret, err := clickhouse.ScanOne(sqlGetBlockMetricsMaxKnownHeight, func(rows *sql.Rows) (interface{}, error) {
+		var maxKnownHeight int
+		err := rows.Scan(&maxKnownHeight)
+		return maxKnownHeight, err
+	})
+	if err != nil {
+		logger.Log.Error("GetBlockMetricsMaxKnownHeight failed", zap.Error(err))
+		return 0, err
+	}
+	if ret == nil {
+		return 0, nil
+	}
+	return ret.(int), nil
+}
+
 func GetBlockMetricsByHeightRange(fromHeight, toHeight, interval int) ([]BlockMetricTrendPoint, error) {
 	if toHeight <= fromHeight || fromHeight < 0 {
 		return nil, nil

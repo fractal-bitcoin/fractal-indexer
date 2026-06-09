@@ -159,6 +159,12 @@ func GetBlockMetricsDemo(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed")
 		return
 	}
+	maxKnownHeight, err := service.GetBlockMetricsMaxKnownHeight()
+	if err != nil {
+		logger.Log.Error("GetBlockMetricsMaxKnownHeight failed", zap.Error(err))
+		c.String(http.StatusInternalServerError, "failed")
+		return
+	}
 	pointsJSON, err := json.Marshal(points)
 	if err != nil {
 		logger.Log.Error("marshal block metrics demo data failed", zap.Error(err))
@@ -169,10 +175,11 @@ func GetBlockMetricsDemo(c *gin.Context) {
 	tmpl := template.Must(template.New("block-metrics-demo").Parse(blockMetricsDemoHTML))
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.Execute(c.Writer, gin.H{
-		"FromHeight": fromHeight,
-		"ToHeight":   toHeight,
-		"Interval":   interval,
-		"PointsJSON": template.JS(pointsJSON),
+		"FromHeight":     fromHeight,
+		"ToHeight":       toHeight,
+		"Interval":       interval,
+		"MaxKnownHeight": maxKnownHeight,
+		"PointsJSON":     template.JS(pointsJSON),
 	}); err != nil {
 		logger.Log.Error("render block metrics demo failed", zap.Error(err))
 	}
@@ -252,7 +259,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 	const form = document.querySelector(".toolbar");
 	const fromInput = form.querySelector("input[name='fromHeight']");
 	const toInput = form.querySelector("input[name='toHeight']");
-	const maxKnownHeight = points.length > 0 ? points[points.length - 1].toHeight : Number(toInput.value || 0);
+	const maxKnownHeight = Number({{.MaxKnownHeight}});
 	function randomizeRange() {
 		const upperBound = Math.max(0, maxKnownHeight);
 		if (upperBound <= 1000) {
