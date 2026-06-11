@@ -84,12 +84,21 @@ LISTEN=:8000 ./fractal-indexer
 | 参数 | 说明 |
 |------|------|
 | `-full` | 从创世块开始全量重建。会清空 Redis/Pika 并初始化 ClickHouse 同步表。 |
-| `-start <height>` | 指定同步起始高度。 |
+| `-start <height>` | 指定同步起始高度。在 `metric_only -full` 模式下会覆盖 `metrics_start_height`。 |
 | `-end <height>` | 指定同步结束高度。设置后会关闭 lag 行为。 |
 | `-once` | 同步一轮后退出，适合由外部 supervisor 周期拉起。 |
 | `-lag <n>` | 保留最新 `n` 个块不同步。`-span` 是兼容旧参数的别名。 |
 | `-nblock <n>` | 每轮从 RPC 拉取的 block id 数量，默认 256。 |
 | `-reorg` | reorg 测试模式。 |
+
+Metric-only 全量同步可以从配置高度开始重建指标表：
+
+```yaml
+index_mode: metric_only
+metrics_start_height: 800000
+```
+
+当 `index_mode: metric_only` 时，`-full` 只会重建 `blkmetric_height`，并从 `metrics_start_height` 开始同步。命令行传入 `-start <height>` 时优先使用命令行高度。业务全量同步仍然从创世块开始，因为 UTXO 和 inscription 状态依赖历史区块。
 
 环境变量：
 

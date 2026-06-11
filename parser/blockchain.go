@@ -357,6 +357,10 @@ func (bc *Blockchain) InitLatestMetricBlockFromRPC(batch uint32) (uint32, bool) 
 	return bc.initLatestBlockFromRPCByBlockID(batch, blockIdHex)
 }
 
+func (bc *Blockchain) InitMetricFullBlockFromRPC(startHeight, batch uint32) (uint32, bool) {
+	return bc.initBlockRangeFromRPC(startHeight, startHeight+batch, 0, "")
+}
+
 func (bc *Blockchain) initLatestBlockFromRPCByBlockID(batch uint32, blockIdHex string) (uint32, bool) {
 	var heightPoint uint32 = 0
 
@@ -369,18 +373,33 @@ func (bc *Blockchain) initLatestBlockFromRPCByBlockID(batch uint32, blockIdHex s
 	}
 	// logger.Log.Info("load block header from rpc", zap.Uint32("height", heightPoint))
 
-	bc.BlocksOfChainById = make(map[string]struct{}, 0)
-	bc.BlocksOfChainByHeight = make(map[uint32]*model.BlockIndexInfo, 0)
-
 	var startHeight uint32 = 0
 	if heightPoint > uint32(bc.ReorgBlockByRpc) {
 		startHeight = heightPoint - uint32(bc.ReorgBlockByRpc)
 	}
 	endHeight := heightPoint + 1 + batch
-	blockInfos, ok := loader.GetBlockIndexRangeStandardRPC(startHeight, endHeight, heightPoint, blockIdHex)
+	return bc.initBlockRangeFromRPC(startHeight, endHeight, heightPoint, blockIdHex)
+}
+
+func (bc *Blockchain) initBlockRangeFromRPC(startHeight, endHeight, stopHeight uint32, stopHash string) (uint32, bool) {
+	bc.resetBlockIndexCaches()
+	blockInfos, ok := loader.GetBlockIndexRangeStandardRPC(startHeight, endHeight, stopHeight, stopHash)
 	if !ok {
-		return heightPoint, false
+		return stopHeight, false
 	}
+	bc.applyBlockIndexInfos(blockInfos)
+	return stopHeight, true
+}
+
+func (bc *Blockchain) resetBlockIndexCaches() {
+	if bc.Blocks == nil {
+		bc.Blocks = make(map[string]*model.BlockIndex)
+	}
+	bc.BlocksOfChainById = make(map[string]struct{}, 0)
+	bc.BlocksOfChainByHeight = make(map[uint32]*model.BlockIndexInfo, 0)
+}
+
+func (bc *Blockchain) applyBlockIndexInfos(blockInfos []*loader.BlockIndexInfo) {
 	var parentHex string
 	for _, blk := range blockInfos {
 		block := &model.BlockIndexInfo{
@@ -403,7 +422,6 @@ func (bc *Blockchain) initLatestBlockFromRPCByBlockID(batch uint32, blockIdHex s
 		}
 		parentHex = blk.HashHex
 	}
-	return heightPoint, true
 }
 
 // GetBlockSyncCommonBlockHeight gets the common block height where block sync starts.

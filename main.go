@@ -47,6 +47,7 @@ var (
 	endBlockHeight   uint32
 	syncLagBlocks    uint32
 	batchBlkCount    uint32
+	startFlagSet     bool
 	isFull           bool
 	syncOnce         bool
 	reorgTest        bool
@@ -60,7 +61,7 @@ func initIndexer() {
 
 	flag.BoolVar(&reorgTest, "reorg", false, "reorg 1~5 blocks random")
 	flag.BoolVar(&syncOnce, "once", false, "sync 1 block then stop")
-	flag.BoolVar(&isFull, "full", false, "start from genesis")
+	flag.BoolVar(&isFull, "full", false, "rebuild from genesis, or metrics_start_height in metric_only mode")
 	flag.UintVar(&startBlockHeightVar, "start", 0, "start block height")
 	flag.UintVar(&endBlockHeightVar, "end", 0, "end block height")
 	flag.UintVar(&syncLagBlocksVar, "lag", 0, "number of latest blocks to keep unsynced")
@@ -71,6 +72,11 @@ func initIndexer() {
 
 	startBlockHeight = uint32(startBlockHeightVar)
 	endBlockHeight = uint32(endBlockHeightVar)
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "start" {
+			startFlagSet = true
+		}
+	})
 	if endBlockHeight > 0 {
 		syncLagBlocksVar = 0
 	}
@@ -102,6 +108,9 @@ func initIndexer() {
 	if model.IsMetricOnly() {
 		model.MetricsEnabled = true
 		model.EnableWAL = false
+		if isFull && !startFlagSet {
+			startBlockHeight = viper.GetUint32("metrics_start_height")
+		}
 	}
 	if viper.IsSet("block_decode_concurrency") {
 		blockDecodeConcurrency := viper.GetInt("block_decode_concurrency")
@@ -153,8 +162,8 @@ func syncBlock() {
 	}
 
 	if isFull {
-		startBlockHeight = 0 // Start a full rescan from genesis.
 		if model.ShouldIndexBusiness() {
+			startBlockHeight = 0 // Start a full business rescan from genesis.
 			rdb.FlushdbInRedis() // Clear Redis.
 			if ok := store.CreateAllSyncCk(); !ok {
 				triggerStop()
@@ -201,6 +210,10 @@ func syncBlock() {
 
 		if model.ShouldIndexBusiness() {
 			if _, ok := blockchain.InitLatestBlockFromRPC(batchBlkCount); !ok { // Load the latest block headers.
+				break
+			}
+		} else if isFull && startBlockHeight > 0 {
+			if _, ok := blockchain.InitMetricFullBlockFromRPC(startBlockHeight, batchBlkCount); !ok {
 				break
 			}
 		} else {
