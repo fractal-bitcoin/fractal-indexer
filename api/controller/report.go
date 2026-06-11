@@ -266,6 +266,10 @@ const blockMetricsDemoHTML = `<!doctype html>
 	const w = canvas.width, h = canvas.height;
 	const innerW = w - pad.left - pad.right;
 	const innerH = h - pad.top - pad.bottom;
+	const utc8OffsetMs = 8 * 60 * 60 * 1000;
+	const genesisEstimateTime = Date.UTC(2024, 8, 9, 0, 0, 0);
+	const blockEstimateMs = 24 * 60 * 60 * 1000 / 2880;
+	let hoverIndex = -1;
 	const checks = Array.from(document.querySelectorAll("#controls input[type=checkbox]"));
 	const form = document.querySelector(".toolbar");
 	const fromInput = form.querySelector("input[name='fromHeight']");
@@ -331,6 +335,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 			const body = await response.json();
 			if (!body || body.code !== 0) throw new Error((body && body.msg) || "failed");
 			points = Array.isArray(body.data) ? body.data : [];
+			hoverIndex = -1;
 			updateURL(range);
 			updateTitle(range);
 			draw();
@@ -376,6 +381,91 @@ const blockMetricsDemoHTML = `<!doctype html>
 	function valueOf(p, key) {
 		return key === "other" ? otherValue(p) : (p[key] || 0);
 	}
+	function xAt(i) {
+		return pad.left + (points.length <= 1 ? 0 : innerW * i / (points.length - 1));
+	}
+	function yAt(v, maxY) {
+		return h - pad.bottom - innerH * v / maxY;
+	}
+	function formatEstimatedTime(height) {
+		const ms = genesisEstimateTime + (height - 1) * blockEstimateMs;
+		const d = new Date(ms + utc8OffsetMs);
+		const yyyy = d.getUTCFullYear();
+		const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+		const dd = String(d.getUTCDate()).padStart(2, "0");
+		const hh = String(d.getUTCHours()).padStart(2, "0");
+		const mi = String(d.getUTCMinutes()).padStart(2, "0");
+		return yyyy + "-" + mm + "-" + dd + " " + hh + ":" + mi;
+	}
+	function wrapTooltipText(lines, maxWidth) {
+		return lines.flatMap((line) => {
+			const parts = String(line).split(" ");
+			const wrapped = [];
+			let current = "";
+			for (const part of parts) {
+				const next = current ? current + " " + part : part;
+				if (current && ctx.measureText(next).width > maxWidth) {
+					wrapped.push(current);
+					current = part;
+				} else {
+					current = next;
+				}
+			}
+			if (current) wrapped.push(current);
+			return wrapped;
+		});
+	}
+	function renderHover(active, maxY) {
+		if (hoverIndex < 0 || hoverIndex >= points.length) return;
+		const p = points[hoverIndex];
+		const x = xAt(hoverIndex);
+		ctx.save();
+		ctx.strokeStyle = "#0f172a";
+		ctx.lineWidth = 1;
+		ctx.setLineDash([4, 4]);
+		ctx.beginPath();
+		ctx.moveTo(x, pad.top);
+		ctx.lineTo(x, h - pad.bottom);
+		ctx.stroke();
+		ctx.setLineDash([]);
+
+		for (const key of active) {
+			const [, color] = seriesConfig[key];
+			const y = yAt(valueOf(p, key), maxY);
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.arc(x, y, 3, 0, Math.PI * 2);
+			ctx.fill();
+		}
+
+		ctx.font = "12px sans-serif";
+		const lines = [
+			"height: " + p.height.toLocaleString() + " - " + (p.toHeight - 1).toLocaleString(),
+			"time: " + formatEstimatedTime(p.height),
+			...active.map((key) => seriesConfig[key][0] + ": " + valueOf(p, key).toLocaleString()),
+		];
+		const textLines = wrapTooltipText(lines, 220);
+		const lineHeight = 18;
+		const boxW = Math.min(260, Math.max(...textLines.map((line) => ctx.measureText(line).width)) + 24);
+		const boxH = textLines.length * lineHeight + 16;
+		let boxX = x + 12;
+		if (boxX + boxW > w - 8) boxX = x - boxW - 12;
+		if (boxX < 8) boxX = 8;
+		let boxY = pad.top + 8;
+		if (boxY + boxH > h - pad.bottom - 8) boxY = h - pad.bottom - boxH - 8;
+		ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
+		ctx.strokeStyle = "#cbd5e1";
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+		ctx.fill();
+		ctx.stroke();
+		textLines.forEach((line, i) => {
+			ctx.fillStyle = i < 2 ? "#334155" : "#0f172a";
+			ctx.fillText(line, boxX + 12, boxY + 20 + i * lineHeight);
+		});
+		ctx.restore();
+	}
 	function renderSummary() {
 		const totalTx = points.reduce((sum, p) => sum + (p.txCount || 0), 0);
 		const selected = points.reduce((sum, p) => sum + selectedProtocolSum(p), 0);
@@ -411,15 +501,13 @@ const blockMetricsDemoHTML = `<!doctype html>
 			ctx.lineTo(w - pad.right, y);
 			ctx.stroke();
 		}
-		function xAt(i) { return pad.left + (points.length <= 1 ? 0 : innerW * i / (points.length - 1)); }
-		function yAt(v) { return h - pad.bottom - innerH * v / maxY; }
 		for (const key of active) {
 			const [label, color] = seriesConfig[key];
 			ctx.strokeStyle = color;
 			ctx.lineWidth = key === "txCount" || key === "other" ? 2.5 : 2;
 			ctx.beginPath();
 			points.forEach((p, i) => {
-				const x = xAt(i), y = yAt(valueOf(p, key));
+				const x = xAt(i), y = yAt(valueOf(p, key), maxY);
 				if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
 			});
 			ctx.stroke();
@@ -429,9 +517,37 @@ const blockMetricsDemoHTML = `<!doctype html>
 			ctx.fillText(String(points[0].height), pad.left, h - 12);
 			ctx.fillText(String(points[points.length - 1].toHeight), w - pad.right - 70, h - 12);
 		}
+		renderHover(active, maxY);
 		renderSummary();
 	}
+	function updateHover(event) {
+		if (points.length === 0) return;
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		const x = (event.clientX - rect.left) * scaleX;
+		const y = (event.clientY - rect.top) * scaleY;
+		if (x < pad.left || x > w - pad.right || y < pad.top || y > h - pad.bottom) {
+			if (hoverIndex !== -1) {
+				hoverIndex = -1;
+				draw();
+			}
+			return;
+		}
+		const nextIndex = points.length <= 1 ? 0 : Math.round((x - pad.left) * (points.length - 1) / innerW);
+		if (nextIndex !== hoverIndex) {
+			hoverIndex = Math.max(0, Math.min(points.length - 1, nextIndex));
+			draw();
+		}
+	}
+	function clearHover() {
+		if (hoverIndex === -1) return;
+		hoverIndex = -1;
+		draw();
+	}
 	checks.forEach((el) => el.addEventListener("change", draw));
+	canvas.addEventListener("mousemove", updateHover);
+	canvas.addEventListener("mouseleave", clearHover);
 	form.addEventListener("submit", (event) => {
 		event.preventDefault();
 		loadMetrics();
