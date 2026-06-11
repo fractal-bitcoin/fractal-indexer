@@ -94,7 +94,7 @@ func GetLatestBlocksHeightAndInvalue(c *gin.Context) {
 }
 
 const (
-	maxBlockMetricRange       = 400000
+	maxBlockMetricPoints      = 10000
 	randomBlockMetricMaxRange = 10000
 )
 
@@ -118,9 +118,20 @@ func parseMetricHeightRange(c *gin.Context) (int, int, int, bool) {
 		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "invalid interval", Data: nil})
 		return 0, 0, 0, false
 	}
-	if fromHeight < 0 || toHeight <= fromHeight || toHeight-fromHeight > maxBlockMetricRange {
+	if fromHeight < 0 || toHeight <= fromHeight {
 		logger.Log.Info("invalid metric height range", zap.Int("fromHeight", fromHeight), zap.Int("toHeight", toHeight))
 		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "invalid fromHeight or toHeight", Data: nil})
+		return 0, 0, 0, false
+	}
+	pointCount := (toHeight - fromHeight + interval - 1) / interval
+	if pointCount > maxBlockMetricPoints {
+		logger.Log.Info("metric point count exceeds limit",
+			zap.Int("fromHeight", fromHeight),
+			zap.Int("toHeight", toHeight),
+			zap.Int("interval", interval),
+			zap.Int("pointCount", pointCount),
+			zap.Int("maxPointCount", maxBlockMetricPoints))
+		c.JSON(http.StatusOK, model.Response{Code: -1, Msg: "too many metric points", Data: nil})
 		return 0, 0, 0, false
 	}
 	return fromHeight, toHeight, interval, true
@@ -182,7 +193,7 @@ func GetBlockMetricsDemo(c *gin.Context) {
 		"ToHeight":               toHeight,
 		"Interval":               interval,
 		"MaxKnownHeight":         maxKnownHeight,
-		"MaxBlockMetricRange":    maxBlockMetricRange,
+		"MaxBlockMetricPoints":   maxBlockMetricPoints,
 		"RandomBlockMetricRange": randomBlockMetricMaxRange,
 		"PointsJSON":             template.JS(pointsJSON),
 	}); err != nil {
@@ -278,7 +289,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 	const loadButton = form.querySelector("button[type='submit']");
 	const randomButton = document.getElementById("randomRange");
 	const maxKnownHeight = Number({{.MaxKnownHeight}});
-	const maxBlockMetricRange = Number({{.MaxBlockMetricRange}});
+	const maxBlockMetricPoints = Number({{.MaxBlockMetricPoints}});
 	const randomBlockMetricMaxRange = Number({{.RandomBlockMetricRange}});
 	function parseInteger(value) {
 		const text = String(value).trim();
@@ -293,8 +304,12 @@ const blockMetricsDemoHTML = `<!doctype html>
 		if (toHeight === null) return { error: "invalid toHeight" };
 		const interval = parseInteger(intervalInput.value);
 		if (interval === null) return { error: "invalid interval" };
-		if (fromHeight < 0 || toHeight <= fromHeight || toHeight - fromHeight > maxBlockMetricRange) {
-			return { error: "invalid range: max " + maxBlockMetricRange.toLocaleString() + " blocks" };
+		if (fromHeight < 0 || toHeight <= fromHeight) {
+			return { error: "invalid fromHeight or toHeight" };
+		}
+		const pointCount = Math.ceil((toHeight - fromHeight) / interval);
+		if (pointCount > maxBlockMetricPoints) {
+			return { error: "too many points: max " + maxBlockMetricPoints.toLocaleString() };
 		}
 		return { fromHeight, toHeight, interval };
 	}
