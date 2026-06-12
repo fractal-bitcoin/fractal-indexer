@@ -26,6 +26,7 @@ const (
 	BlockMetricTxWithRunesEtching
 	BlockMetricTxWithTacit
 	BlockMetricTxWithAlkanes
+	BlockMetricTxWithRunesMint
 )
 
 var (

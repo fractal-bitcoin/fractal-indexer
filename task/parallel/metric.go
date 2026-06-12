@@ -33,6 +33,7 @@ func ParseBlockMetricsParallel(block *model.Block) {
 		hasOpReturn := false
 		hasRunestone := false
 		hasEtching := false
+		hasMint := false
 		hasAlkanes := false
 		for outIdx := range tx.TxOuts {
 			pkScript := tx.TxOuts[outIdx].PkScript
@@ -44,6 +45,9 @@ func ParseBlockMetricsParallel(block *model.Block) {
 			}
 			if !hasEtching && scriptDecoder.IsRunesEtching(pkScript) {
 				hasEtching = true
+			}
+			if !hasMint && scriptDecoder.IsRunesMint(pkScript) {
+				hasMint = true
 			}
 			if !hasAlkanes && scriptDecoder.IsAlkanes(pkScript) {
 				hasAlkanes = true
@@ -57,6 +61,9 @@ func ParseBlockMetricsParallel(block *model.Block) {
 		}
 		if hasEtching {
 			metrics[constant.BlockMetricTxWithRunesEtching]++
+		}
+		if hasMint {
+			metrics[constant.BlockMetricTxWithRunesMint]++
 		}
 		if hasAlkanes {
 			metrics[constant.BlockMetricTxWithAlkanes]++

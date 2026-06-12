@@ -10,7 +10,7 @@ import (
 func TestParseBlockMetricsParallel(t *testing.T) {
 	block := &model.Block{
 		Height: 1,
-		TxCnt:  4,
+		TxCnt:  5,
 		Txs: []model.Tx{
 			{
 				WitOffset:         10,
@@ -40,20 +40,26 @@ func TestParseBlockMetricsParallel(t *testing.T) {
 					{PkScript: metricTestAlkanesScript()},
 				},
 			},
+			{
+				TxOuts: []model.TxOut{
+					{PkScript: metricTestAlkanesMintScript()},
+				},
+			},
 		},
 		ParseData: &model.ProcessBlock{},
 	}
 
 	ParseBlockMetricsParallel(block)
 
-	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxCount, 4)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxCount, 5)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithWitness, 2)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithInscription, 1)
-	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithOpReturn, 3)
-	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithRunesRunestone, 2)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithOpReturn, 4)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithRunesRunestone, 3)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithRunesEtching, 1)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithRunesMint, 1)
 	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithTacit, 1)
-	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithAlkanes, 1)
+	assertMetric(t, block.ParseData.BlockMetrics, constant.BlockMetricTxWithAlkanes, 2)
 }
 
 func assertMetric(t *testing.T, metrics map[uint32]uint32, metric, want uint32) {
@@ -82,4 +88,8 @@ func metricTestTacitWitness() []byte {
 
 func metricTestAlkanesScript() []byte {
 	return []byte{0x6a, 0x5d, 0x04, 0xff, 0x7f, 0x01, 0x00}
+}
+
+func metricTestAlkanesMintScript() []byte {
+	return []byte{0x6a, 0x5d, 0x08, 0x14, 0x01, 0x14, 0x02, 0xff, 0x7f, 0x01, 0x00}
 }

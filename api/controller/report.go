@@ -247,8 +247,9 @@ const blockMetricsDemoHTML = `<!doctype html>
 		<label><input type="checkbox" data-key="witness"><span class="swatch" style="--c:#2563eb"></span>witness</label>
 		<label><input type="checkbox" data-key="opreturn" checked><span class="swatch" style="--c:#dc2626"></span>opreturn</label>
 		<label><input type="checkbox" data-key="inscription" checked><span class="swatch" style="--c:#16a34a"></span>inscription</label>
-		<label><input type="checkbox" data-key="runesRunestone" checked><span class="swatch" style="--c:#9333ea"></span>runes runestone</label>
+		<label><input type="checkbox" data-key="runesRunestone" checked><span class="swatch" style="--c:#9333ea"></span>runestone envelope</label>
 		<label><input type="checkbox" data-key="runesEtching" checked><span class="swatch" style="--c:#ea580c"></span>runes etching</label>
+		<label><input type="checkbox" data-key="runesMint" checked><span class="swatch" style="--c:#f59e0b"></span>runes mint</label>
 		<label><input type="checkbox" data-key="tacit" checked><span class="swatch" style="--c:#0891b2"></span>tacit</label>
 		<label><input type="checkbox" data-key="alkanes" checked><span class="swatch" style="--c:#4b5563"></span>alkanes</label>
 		<label><input type="checkbox" data-key="other" checked><span class="swatch" style="--c:#64748b"></span>other</label>
@@ -257,14 +258,15 @@ const blockMetricsDemoHTML = `<!doctype html>
 	<canvas id="chart" width="1200" height="520"></canvas>
 	<script>
 	let points = {{ .PointsJSON }};
-	const protocolKeys = ["witness", "opreturn", "inscription", "runesRunestone", "runesEtching", "tacit", "alkanes"];
+	const protocolKeys = ["witness", "opreturn", "inscription", "runesRunestone", "runesEtching", "runesMint", "tacit", "alkanes"];
 	const seriesConfig = {
 		txCount: ["Total Tx", "#111827"],
 		witness: ["Witness", "#2563eb"],
 		opreturn: ["OpReturn", "#dc2626"],
 		inscription: ["Inscription", "#16a34a"],
-		runesRunestone: ["Runes Runestone", "#9333ea"],
+		runesRunestone: ["Runestone Envelope", "#9333ea"],
 		runesEtching: ["Runes Etching", "#ea580c"],
+		runesMint: ["Runes Mint", "#f59e0b"],
 		tacit: ["Tacit", "#0891b2"],
 		alkanes: ["Alkanes", "#4b5563"],
 		other: ["Other", "#64748b"],

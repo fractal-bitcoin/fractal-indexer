@@ -270,6 +270,7 @@ type BlockMetricTrendPoint struct {
 	Inscription    int `json:"inscription"`
 	RunesRunestone int `json:"runesRunestone"`
 	RunesEtching   int `json:"runesEtching"`
+	RunesMint      int `json:"runesMint"`
 	Tacit          int `json:"tacit"`
 	Alkanes        int `json:"alkanes"`
 }
@@ -365,6 +366,8 @@ func GetBlockMetricsByHeightRange(fromHeight, toHeight, interval int) ([]BlockMe
 			points[row.Bucket].RunesRunestone = row.Value
 		case metricConstant.BlockMetricTxWithRunesEtching:
 			points[row.Bucket].RunesEtching = row.Value
+		case metricConstant.BlockMetricTxWithRunesMint:
+			points[row.Bucket].RunesMint = row.Value
 		case metricConstant.BlockMetricTxWithTacit:
 			points[row.Bucket].Tacit = row.Value
 		case metricConstant.BlockMetricTxWithAlkanes:

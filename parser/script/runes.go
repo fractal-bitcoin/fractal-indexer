@@ -5,6 +5,7 @@ import "github.com/btcsuite/btcd/txscript"
 const (
 	runesMagicOpcode = txscript.OP_13
 	runesTagFlags    = 2
+	runesTagMint     = 20
 	runesFlagEtching = 1
 )
 
@@ -21,6 +22,14 @@ func IsRunesEtching(pkScript []byte) bool {
 		return false
 	}
 	return runestoneHasEtching(payload)
+}
+
+func IsRunesMint(pkScript []byte) bool {
+	payload, ok := runestonePayload(pkScript)
+	if !ok {
+		return false
+	}
+	return runestoneHasMint(payload)
 }
 
 func runestonePayload(pkScript []byte) ([]byte, bool) {
@@ -62,6 +71,34 @@ func runestoneHasEtching(payload []byte) bool {
 
 		if tag == runesTagFlags && value&runesFlagEtching != 0 {
 			return true
+		}
+	}
+	return false
+}
+
+func runestoneHasMint(payload []byte) bool {
+	mintValues := 0
+	for offset := 0; offset < len(payload); {
+		tag, n := decodeRunestoneVarint(payload[offset:])
+		if n == 0 {
+			return false
+		}
+		offset += n
+		if tag == 0 {
+			break
+		}
+
+		_, n = decodeRunestoneVarint(payload[offset:])
+		if n == 0 {
+			return false
+		}
+		offset += n
+
+		if tag == runesTagMint {
+			mintValues++
+			if mintValues >= 2 {
+				return true
+			}
 		}
 	}
 	return false
