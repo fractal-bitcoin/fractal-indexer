@@ -11,6 +11,7 @@ import (
 	"fractal-indexer/api/model"
 	"fractal-indexer/api/service"
 	"fractal-indexer/api/service/brc20"
+	indexerConstant "fractal-indexer/constant"
 	"fractal-indexer/lib/midware"
 	"fractal-indexer/logger"
 	"net/http"
@@ -161,6 +162,23 @@ func initConfig() {
 	conf.DEBUG = debugBRC20 == "true"
 }
 
+func initChainConfig() {
+	chainViper := viper.New()
+	chainViper.SetConfigFile("conf/chain.yaml")
+	if err := chainViper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		} else {
+			panic(fmt.Errorf("Fatal error config file: %s \n", err))
+		}
+	}
+
+	indexerConstant.CHAIN_TYPE = chainViper.GetString("chain_type")
+	if indexerConstant.CHAIN_TYPE != indexerConstant.CHAIN_TYPE_BTC && indexerConstant.CHAIN_TYPE != indexerConstant.CHAIN_TYPE_FRACTAL {
+		panic(fmt.Errorf("chain_type must be set, use <%v|%v>", indexerConstant.CHAIN_TYPE_BTC, indexerConstant.CHAIN_TYPE_FRACTAL))
+	}
+}
+
 func KeepJsonContentType() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -192,6 +210,7 @@ func Run() {
 	logger.Init()
 	constant.InitEnv()
 	initConfig()
+	initChainConfig()
 	clickhouse.Init()
 	rdb.InitClients()
 

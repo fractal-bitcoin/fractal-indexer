@@ -32,6 +32,7 @@ The query API reads indexer outputs and exposes HTTP queries:
 2. Uses the root `conf/kvdb.yaml` to read primary Pika/Redis data written by the indexer.
 3. Uses `conf/api/kvdb_brc20.yaml` to store query-side BRC-20 state/history.
 4. Uses `conf/api/conf.yaml` for query-specific configuration.
+5. Uses `conf/chain.yaml` to apply chain-specific report settings.
 
 API routes include `/blockchain/info`, inscription, BRC20, report, admin, and other endpoints.
 
@@ -41,7 +42,7 @@ Runtime configuration files are under the root `conf/` directory. API-specific c
 
 | File | Used by | Description |
 |------|---------|-------------|
-| `conf/chain.yaml` | indexer | Chain type, blocks path, RPC/ZMQ, and activation heights. |
+| `conf/chain.yaml` | indexer + query | Chain type, blocks path, RPC/ZMQ, activation heights, and query report chain settings. |
 | `conf/db.yaml` | indexer + query | ClickHouse connection configuration. The current config uses the Docker-internal hostname `clickhouse`. |
 | `conf/kvdb.yaml` | indexer + query | Primary Pika/Redis configuration for shared indexer data such as UTXOs, NFTs, and sync heights. The default `addrs` value is a single-item list: `["pika:6390"]`. |
 | `conf/api/conf.yaml` | query | API-owned configuration such as HTTP/cache timeout and query logger settings. |

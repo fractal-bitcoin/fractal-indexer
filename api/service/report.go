@@ -15,6 +15,34 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// Height 1 anchors used by the report demo's linear time estimate.
+	blockMetricsFractalGenesisUnixMs = int64(1725840000000)
+	blockMetricsFractalBlockMs       = int64(30 * 1000)
+	blockMetricsBTCGenesisUnixMs     = int64(1231006505000)
+	blockMetricsBTCBlockMs           = int64(10 * 60 * 1000)
+)
+
+type BlockMetricsTimeEstimateConfig struct {
+	GenesisUnixMs int64
+	BlockMs       int64
+}
+
+func GetBlockMetricsTimeEstimateConfig() BlockMetricsTimeEstimateConfig {
+	switch metricConstant.CHAIN_TYPE {
+	case metricConstant.CHAIN_TYPE_BTC:
+		return BlockMetricsTimeEstimateConfig{
+			GenesisUnixMs: blockMetricsBTCGenesisUnixMs,
+			BlockMs:       blockMetricsBTCBlockMs,
+		}
+	default:
+		return BlockMetricsTimeEstimateConfig{
+			GenesisUnixMs: blockMetricsFractalGenesisUnixMs,
+			BlockMs:       blockMetricsFractalBlockMs,
+		}
+	}
+}
+
 type CoreDataUpToHeight struct {
 	Hash   string // Hash of all following fields for fast comparison.
 	Height uint64 // Specified height.

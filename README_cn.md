@@ -32,6 +32,7 @@ Query API 负责读取 indexer 产物并提供 HTTP 查询：
 2. 使用同一个根 `conf/kvdb.yaml` 读取 indexer 写入的主 Pika/Redis 数据。
 3. 使用 `conf/api/kvdb_brc20.yaml` 保存 query 侧 BRC-20 state/history。
 4. 使用 `conf/api/conf.yaml` 读取 query 自有配置。
+5. 使用 `conf/chain.yaml` 应用 report 的链相关设置。
 
 API 路由包括 `/blockchain/info`、inscription、BRC20、report、admin 等接口。
 
@@ -41,7 +42,7 @@ API 路由包括 `/blockchain/info`、inscription、BRC20、report、admin 等�
 
 | 文件 | 使用方 | 说明 |
 |------|--------|------|
-| `conf/chain.yaml` | indexer | 链类型、blocks 路径、RPC/ZMQ、激活高度。 |
+| `conf/chain.yaml` | indexer + query | 链类型、blocks 路径、RPC/ZMQ、激活高度，以及 query report 的链相关设置。 |
 | `conf/db.yaml` | indexer + query | ClickHouse 连接配置。当前配置使用 Docker 内部域名 `clickhouse`。 |
 | `conf/kvdb.yaml` | indexer + query | 主 Pika/Redis 配置，用于 UTXO/NFT/同步高度等 indexer 共享数据。默认 `addrs` 是单元素 list：`["pika:6390"]`。 |
 | `conf/api/conf.yaml` | query | HTTP/cache timeout、query logger 等 API 自有配置。 |

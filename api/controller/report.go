@@ -195,6 +195,7 @@ func GetBlockMetricsDemo(c *gin.Context) {
 		"MaxKnownHeight":         maxKnownHeight,
 		"MaxBlockMetricPoints":   maxBlockMetricPoints,
 		"RandomBlockMetricRange": randomBlockMetricMaxRange,
+		"TimeEstimate":           service.GetBlockMetricsTimeEstimateConfig(),
 		"PointsJSON":             template.JS(pointsJSON),
 	}); err != nil {
 		logger.Log.Error("render block metrics demo failed", zap.Error(err))
@@ -277,9 +278,8 @@ const blockMetricsDemoHTML = `<!doctype html>
 	const w = canvas.width, h = canvas.height;
 	const innerW = w - pad.left - pad.right;
 	const innerH = h - pad.top - pad.bottom;
-	const utc8OffsetMs = 8 * 60 * 60 * 1000;
-	const genesisEstimateTime = Date.UTC(2024, 8, 9, 0, 0, 0);
-	const blockEstimateMs = 24 * 60 * 60 * 1000 / 2880;
+	const genesisEstimateTime = Number({{.TimeEstimate.GenesisUnixMs}});
+	const blockEstimateMs = Number({{.TimeEstimate.BlockMs}});
 	let hoverIndex = -1;
 	const checks = Array.from(document.querySelectorAll("#controls input[type=checkbox]"));
 	const form = document.querySelector(".toolbar");
@@ -404,13 +404,14 @@ const blockMetricsDemoHTML = `<!doctype html>
 	}
 	function formatEstimatedTime(height) {
 		const ms = genesisEstimateTime + (height - 1) * blockEstimateMs;
-		const d = new Date(ms + utc8OffsetMs);
+		const d = new Date(ms);
 		const yyyy = d.getUTCFullYear();
 		const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
 		const dd = String(d.getUTCDate()).padStart(2, "0");
 		const hh = String(d.getUTCHours()).padStart(2, "0");
 		const mi = String(d.getUTCMinutes()).padStart(2, "0");
-		return yyyy + "-" + mm + "-" + dd + " " + hh + ":" + mi;
+		const ss = String(d.getUTCSeconds()).padStart(2, "0");
+		return yyyy + "-" + mm + "-" + dd + " " + hh + ":" + mi + ":" + ss + " UTC";
 	}
 	function wrapTooltipText(lines, maxWidth) {
 		return lines.flatMap((line) => {
