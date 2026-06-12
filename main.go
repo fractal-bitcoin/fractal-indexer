@@ -195,6 +195,9 @@ func syncBlock() {
 			if ok := blockchain.InitLatestBlockFromDB(); !ok {
 				return
 			}
+		} else if startFlagSet && startBlockHeight > 0 {
+			// Manual metric replay reloads its boundary headers from RPC and does not
+			// require the existing metric progress marker to be valid.
 		} else {
 			if ok := blockchain.InitLatestMetricBlockFromRedis(); !ok {
 				return
@@ -208,12 +211,19 @@ func syncBlock() {
 			break
 		}
 
+		manualMetricCommonBlockID := ""
 		if model.ShouldIndexBusiness() {
 			if _, ok := blockchain.InitLatestBlockFromRPC(batchBlkCount); !ok { // Load the latest block headers.
 				break
 			}
 		} else if isFull && startBlockHeight > 0 {
 			if _, ok := blockchain.InitMetricFullBlockFromRPC(startBlockHeight, batchBlkCount); !ok {
+				break
+			}
+		} else if startFlagSet && startBlockHeight > 0 {
+			var ok bool
+			manualMetricCommonBlockID, ok = blockchain.InitMetricReplayBlockFromRPC(startBlockHeight, batchBlkCount)
+			if !ok {
 				break
 			}
 		} else {
@@ -308,11 +318,20 @@ func syncBlock() {
 					}
 					logger.Log.Info("reorg ok", zap.String("nowBlockId", commonBlock.HashHex))
 				} else {
-					commonBlockID := ""
+					commonBlockID := manualMetricCommonBlockID
 					if startBlockHeight > 0 {
-						commonBlock := blockchain.BlocksOfChainByHeight[startBlockHeight-1]
-						if commonBlock != nil {
-							commonBlockID = commonBlock.HashHex
+						if commonBlockID == "" {
+							commonBlock := blockchain.BlocksOfChainByHeight[startBlockHeight-1]
+							if commonBlock != nil {
+								commonBlockID = commonBlock.HashHex
+							}
+						}
+						if commonBlockID == "" {
+							logger.Log.Error("metric reorg common block header missing",
+								zap.Uint32("start", startBlockHeight),
+								zap.Uint32("commonHeight", startBlockHeight-1))
+							triggerStop()
+							break
 						}
 					}
 					if ok := task.RemoveMetricBlocksForReorg(startBlockHeight, commonBlockID); !ok {

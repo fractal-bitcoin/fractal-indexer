@@ -101,6 +101,8 @@ metrics_start_height: 800000
 
 当 `index_mode: metric_only` 时，`-full` 只会重建 `blkmetric_height`，并从 `metrics_start_height` 开始同步。命令行传入 `-start <height>` 时优先使用命令行高度。业务全量同步仍然从创世块开始，因为 UTXO 和 inscription 状态依赖历史区块。
 
+如果只想局部重跑指标，使用 `index_mode: metric_only` 且不要加 `-full`，传入 `-start <height>`。indexer 会删除 `blkmetric_height` 中 `height >= <height>` 的行，从 RPC 重新加载边界区块头，并从该高度继续写入指标，同时保留更早的指标数据。
+
 环境变量：
 
 | 变量 | 说明 |

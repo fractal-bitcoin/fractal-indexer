@@ -101,6 +101,8 @@ metrics_start_height: 800000
 
 When `index_mode: metric_only`, `-full` rebuilds only `blkmetric_height` and starts at `metrics_start_height`. Passing `-start <height>` on the command line takes precedence. Business full sync still starts from genesis because UTXO and inscription state depend on earlier blocks.
 
+For a partial metric replay, run `index_mode: metric_only` without `-full` and pass `-start <height>`. The indexer deletes `blkmetric_height` rows where `height >= <height>`, reloads the boundary header from RPC, and resumes metrics from that height while preserving earlier metric rows.
+
 Environment variables:
 
 | Variable | Description |

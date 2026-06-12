@@ -27,3 +27,32 @@ func TestApplyBlockIndexInfosInitializesCaches(t *testing.T) {
 		t.Fatalf("main chain tip mismatch: height=%d hash=%q", bc.MainChainHeight, bc.MainChainBlockIdHex)
 	}
 }
+
+func TestMetricReplayCommonBlockID(t *testing.T) {
+	bc := &Blockchain{}
+	bc.resetBlockIndexCaches()
+	bc.applyBlockIndexInfos([]*loader.BlockIndexInfo{
+		{Height: 799999, HashHex: "block799999"},
+		{Height: 800000, HashHex: "block800000"},
+	})
+
+	got, ok := bc.metricReplayCommonBlockID(800000)
+	if !ok {
+		t.Fatal("expected common block")
+	}
+	if got != "block799999" {
+		t.Fatalf("common block mismatch: got %q", got)
+	}
+}
+
+func TestMetricReplayCommonBlockIDMissing(t *testing.T) {
+	bc := &Blockchain{}
+	bc.resetBlockIndexCaches()
+	bc.applyBlockIndexInfos([]*loader.BlockIndexInfo{
+		{Height: 800000, HashHex: "block800000"},
+	})
+
+	if got, ok := bc.metricReplayCommonBlockID(800000); ok || got != "" {
+		t.Fatalf("unexpected common block: got=%q ok=%v", got, ok)
+	}
+}

@@ -361,6 +361,33 @@ func (bc *Blockchain) InitMetricFullBlockFromRPC(startHeight, batch uint32) (uin
 	return bc.initBlockRangeFromRPC(startHeight, startHeight+batch, 0, "")
 }
 
+func (bc *Blockchain) InitMetricReplayBlockFromRPC(startHeight, batch uint32) (string, bool) {
+	headerStartHeight := startHeight
+	if headerStartHeight > 0 {
+		headerStartHeight--
+	}
+	_, ok := bc.initBlockRangeFromRPC(headerStartHeight, startHeight+batch, 0, "")
+	if !ok {
+		return "", false
+	}
+	return bc.metricReplayCommonBlockID(startHeight)
+}
+
+func (bc *Blockchain) metricReplayCommonBlockID(startHeight uint32) (string, bool) {
+	if startHeight == 0 {
+		return "", true
+	}
+	commonBlock := bc.BlocksOfChainByHeight[startHeight-1]
+	if commonBlock == nil {
+		logger.Log.Error("metric replay common block header missing",
+			zap.Uint32("start", startHeight),
+			zap.Uint32("commonHeight", startHeight-1),
+			zap.Int("loadedHeaders", len(bc.BlocksOfChainByHeight)))
+		return "", false
+	}
+	return commonBlock.HashHex, true
+}
+
 func (bc *Blockchain) initLatestBlockFromRPCByBlockID(batch uint32, blockIdHex string) (uint32, bool) {
 	var heightPoint uint32 = 0
 
