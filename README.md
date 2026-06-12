@@ -103,6 +103,8 @@ When `index_mode: metric_only`, `-full` rebuilds only `blkmetric_height` and sta
 
 For a partial metric replay, run `index_mode: metric_only` without `-full` and pass `-start <height>`. The indexer deletes `blkmetric_height` rows where `height >= <height>`, reloads the boundary header from RPC, and resumes metrics from that height while preserving earlier metric rows.
 
+Metric rows include the block timestamp in `blkmetric_height.blocktime`; rebuild this table after metric schema changes.
+
 Environment variables:
 
 | Variable | Description |

@@ -75,6 +75,7 @@ PARTITION BY intDiv(height, 2100)
 		`
 CREATE TABLE IF NOT EXISTS blkmetric_height (
 	height       UInt32,
+	blocktime    UInt32,
 	metric       UInt32,       -- enum: inscription / runes / witness / opreturn ...
 	value        UInt32
 ) engine=MergeTree()
@@ -155,6 +156,7 @@ PARTITION BY intDiv(height, 2100)
 		`
 CREATE TABLE IF NOT EXISTS blkmetric_height (
 	height       UInt32,
+	blocktime    UInt32,
 	metric       UInt32,       -- enum: inscription / runes / witness / opreturn ...
 	value        UInt32
 ) engine=MergeTree()
@@ -207,6 +209,7 @@ PARTITION BY intDiv(height, 2100)
 		`
 CREATE TABLE IF NOT EXISTS blkmetric_height (
 	height       UInt32,
+	blocktime    UInt32,
 	metric       UInt32,       -- enum: inscription / runes / witness / opreturn ...
 	value        UInt32
 ) engine=MergeTree()

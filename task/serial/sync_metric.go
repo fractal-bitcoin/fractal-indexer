@@ -20,6 +20,7 @@ func SyncBlockMetrics(block *model.Block) {
 		}
 		ins.Lock()
 		ins.PutUInt32(block.Height)
+		ins.PutUInt32(block.BlockTime)
 		ins.PutUInt32(metric)
 		ins.PutUInt32(value)
 		if err := ins.EndRow(); err != nil {

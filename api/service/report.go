@@ -15,34 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	// Height 1 anchors used by the report demo's linear time estimate.
-	blockMetricsFractalGenesisUnixMs = int64(1725840000000)
-	blockMetricsFractalBlockMs       = int64(30 * 1000)
-	blockMetricsBTCGenesisUnixMs     = int64(1231006505000)
-	blockMetricsBTCBlockMs           = int64(10 * 60 * 1000)
-)
-
-type BlockMetricsTimeEstimateConfig struct {
-	GenesisUnixMs int64
-	BlockMs       int64
-}
-
-func GetBlockMetricsTimeEstimateConfig() BlockMetricsTimeEstimateConfig {
-	switch metricConstant.CHAIN_TYPE {
-	case metricConstant.CHAIN_TYPE_BTC:
-		return BlockMetricsTimeEstimateConfig{
-			GenesisUnixMs: blockMetricsBTCGenesisUnixMs,
-			BlockMs:       blockMetricsBTCBlockMs,
-		}
-	default:
-		return BlockMetricsTimeEstimateConfig{
-			GenesisUnixMs: blockMetricsFractalGenesisUnixMs,
-			BlockMs:       blockMetricsFractalBlockMs,
-		}
-	}
-}
-
 type CoreDataUpToHeight struct {
 	Hash   string // Hash of all following fields for fast comparison.
 	Height uint64 // Specified height.
@@ -264,6 +236,8 @@ func GetLatestBlocksHeightAndNFTIn(size uint32) ([]HeightNFTIn, error) {
 type BlockMetricTrendPoint struct {
 	Height         int `json:"height"`
 	ToHeight       int `json:"toHeight"`
+	FromTime       int `json:"fromTime"`
+	ToTime         int `json:"toTime"`
 	TxCount        int `json:"txCount"`
 	Witness        int `json:"witness"`
 	OpReturn       int `json:"opreturn"`
@@ -276,14 +250,20 @@ type BlockMetricTrendPoint struct {
 }
 
 type blockMetricRow struct {
-	Bucket int
-	Metric int
-	Value  int
+	Bucket   int
+	Metric   int
+	Value    int
+	FromTime int
+	ToTime   int
 }
 
 const sqlGetBlockMetricsByHeightRange = `
 SELECT
-	intDiv(height - ?, ?) AS bucket, metric, sum(value) AS value
+	intDiv(height - ?, ?) AS bucket,
+	metric,
+	sum(value) AS value,
+	min(blocktime) AS from_time,
+	max(blocktime) AS to_time
 FROM
 	blkmetric_height
 WHERE
@@ -327,7 +307,7 @@ func GetBlockMetricsByHeightRange(fromHeight, toHeight, interval int) ([]BlockMe
 
 	srf := func(rows *sql.Rows) (interface{}, error) {
 		var ret blockMetricRow
-		err := rows.Scan(&ret.Bucket, &ret.Metric, &ret.Value)
+		err := rows.Scan(&ret.Bucket, &ret.Metric, &ret.Value, &ret.FromTime, &ret.ToTime)
 		return ret, err
 	}
 	rows, err := clickhouse.ScanAll(sqlGetBlockMetricsByHeightRange, srf, fromHeight, interval, fromHeight, toHeight)
@@ -352,6 +332,12 @@ func GetBlockMetricsByHeightRange(fromHeight, toHeight, interval int) ([]BlockMe
 	for _, row := range rows.([]blockMetricRow) {
 		if row.Bucket < 0 || row.Bucket >= len(points) {
 			continue
+		}
+		if points[row.Bucket].FromTime == 0 || row.FromTime < points[row.Bucket].FromTime {
+			points[row.Bucket].FromTime = row.FromTime
+		}
+		if row.ToTime > points[row.Bucket].ToTime {
+			points[row.Bucket].ToTime = row.ToTime
 		}
 		switch row.Metric {
 		case metricConstant.BlockMetricTxCount:

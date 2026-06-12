@@ -195,7 +195,6 @@ func GetBlockMetricsDemo(c *gin.Context) {
 		"MaxKnownHeight":         maxKnownHeight,
 		"MaxBlockMetricPoints":   maxBlockMetricPoints,
 		"RandomBlockMetricRange": randomBlockMetricMaxRange,
-		"TimeEstimate":           service.GetBlockMetricsTimeEstimateConfig(),
 		"PointsJSON":             template.JS(pointsJSON),
 	}); err != nil {
 		logger.Log.Error("render block metrics demo failed", zap.Error(err))
@@ -280,8 +279,6 @@ const blockMetricsDemoHTML = `<!doctype html>
 	const w = canvas.width, h = canvas.height;
 	const innerW = w - pad.left - pad.right;
 	const innerH = h - pad.top - pad.bottom;
-	const genesisEstimateTime = Number({{.TimeEstimate.GenesisUnixMs}});
-	const blockEstimateMs = Number({{.TimeEstimate.BlockMs}});
 	let hoverIndex = -1;
 	const checks = Array.from(document.querySelectorAll("#controls input[type=checkbox]"));
 	const form = document.querySelector(".toolbar");
@@ -404,8 +401,9 @@ const blockMetricsDemoHTML = `<!doctype html>
 	function yAt(v, maxY) {
 		return h - pad.bottom - innerH * v / maxY;
 	}
-	function formatEstimatedTime(height) {
-		const ms = genesisEstimateTime + (height - 1) * blockEstimateMs;
+	function formatBlockTime(seconds) {
+		if (!seconds) return "";
+		const ms = Number(seconds) * 1000;
 		const d = new Date(ms);
 		const yyyy = d.getUTCFullYear();
 		const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -414,6 +412,14 @@ const blockMetricsDemoHTML = `<!doctype html>
 		const mi = String(d.getUTCMinutes()).padStart(2, "0");
 		const ss = String(d.getUTCSeconds()).padStart(2, "0");
 		return yyyy + "-" + mm + "-" + dd + " " + hh + ":" + mi + ":" + ss + " UTC";
+	}
+	function formatTimeRange(p) {
+		const from = formatBlockTime(p.fromTime);
+		const to = formatBlockTime(p.toTime);
+		if (!from && !to) return "unknown";
+		if (!to || from === to) return from;
+		if (!from) return to;
+		return from + " - " + to;
 	}
 	function wrapTooltipText(lines, maxWidth) {
 		return lines.flatMap((line) => {
@@ -459,7 +465,7 @@ const blockMetricsDemoHTML = `<!doctype html>
 		ctx.font = "12px sans-serif";
 		const lines = [
 			"height: " + p.height.toLocaleString() + " - " + (p.toHeight - 1).toLocaleString(),
-			"time: " + formatEstimatedTime(p.height),
+			"time: " + formatTimeRange(p),
 			...active.map((key) => seriesConfig[key][0] + ": " + valueOf(p, key).toLocaleString()),
 		];
 		const textLines = wrapTooltipText(lines, 220);
