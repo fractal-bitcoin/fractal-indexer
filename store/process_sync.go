@@ -150,9 +150,20 @@ PARTITION BY intDiv(height, 2100)
 		"INSERT INTO blk SELECT * FROM blk_height",
 	}
 
-	createMetricAllSQLs = []string{
-		"DROP TABLE IF EXISTS blkmetric_height",
-		"DROP TABLE IF EXISTS blkmetric_height_new",
+	removeOrphanPartSQLs = []string{
+		// No-op when there are no orphan blocks.
+		"ALTER TABLE blk_height DELETE WHERE height >= ",
+		"ALTER TABLE blk DELETE WHERE height >= ",
+		"ALTER TABLE blkmetric_height DELETE WHERE height >= ",
+
+		"ALTER TABLE blkevent_height DELETE WHERE height >= ",
+	}
+
+	removeOrphanRevertPartSQLs = []string{
+		"ALTER TABLE blkrevert_height DELETE WHERE height >= ",
+	}
+
+	createPartSQLs = []string{
 		`
 CREATE TABLE IF NOT EXISTS blkmetric_height (
 	height       UInt32,
@@ -163,36 +174,20 @@ CREATE TABLE IF NOT EXISTS blkmetric_height (
 ORDER BY (height, metric)
 PARTITION BY intDiv(height, 2100)
 `,
-	}
-
-	removeOrphanPartSQLs = []string{
-		// No-op when there are no orphan blocks.
-		"ALTER TABLE blk_height DELETE WHERE height >= ",
-		"ALTER TABLE blk DELETE WHERE height >= ",
-
-		"ALTER TABLE blkevent_height DELETE WHERE height >= ",
-	}
-
-	removeOrphanMetricPartSQLs = []string{
-		"ALTER TABLE blkmetric_height DELETE WHERE height >= ",
-	}
-
-	removeOrphanRevertPartSQLs = []string{
-		"ALTER TABLE blkrevert_height DELETE WHERE height >= ",
-	}
-
-	createPartSQLs = []string{
 		"CREATE TABLE IF NOT EXISTS blk_height_new AS blk_height",
+		"CREATE TABLE IF NOT EXISTS blkmetric_height_new AS blkmetric_height",
 		"CREATE TABLE IF NOT EXISTS blkevent_height_new AS blkevent_height",
 		"CREATE TABLE IF NOT EXISTS blkrevert_height_new AS blkrevert_height",
 
 		"TRUNCATE TABLE IF EXISTS blk_height_new",
+		"TRUNCATE TABLE IF EXISTS blkmetric_height_new",
 		"TRUNCATE TABLE IF EXISTS blkevent_height_new",
 		"TRUNCATE TABLE IF EXISTS blkrevert_height_new",
 	}
 
 	processPartSQLs = []string{
 		"INSERT INTO blkevent_height SELECT * FROM blkevent_height_new",
+		"INSERT INTO blkmetric_height SELECT * FROM blkmetric_height_new",
 
 		// Update the block ID index.
 		"INSERT INTO blk SELECT * FROM blk_height_new",
@@ -202,27 +197,8 @@ PARTITION BY intDiv(height, 2100)
 		// "OPTIMIZE TABLE blk_height FINAL",
 
 		"TRUNCATE TABLE IF EXISTS blk_height_new",
+		"TRUNCATE TABLE IF EXISTS blkmetric_height_new",
 		"TRUNCATE TABLE IF EXISTS blkevent_height_new",
-	}
-
-	createMetricPartSQLs = []string{
-		`
-CREATE TABLE IF NOT EXISTS blkmetric_height (
-	height       UInt32,
-	blocktime    UInt32,
-	metric       UInt32,       -- enum: inscription / runes / witness / opreturn ...
-	value        UInt32
-) engine=MergeTree()
-ORDER BY (height, metric)
-PARTITION BY intDiv(height, 2100)
-`,
-		"CREATE TABLE IF NOT EXISTS blkmetric_height_new AS blkmetric_height",
-		"TRUNCATE TABLE IF EXISTS blkmetric_height_new",
-	}
-
-	processMetricPartSQLs = []string{
-		"INSERT INTO blkmetric_height SELECT * FROM blkmetric_height_new",
-		"TRUNCATE TABLE IF EXISTS blkmetric_height_new",
 	}
 
 	// WAL phase: move revert data from staging to final table
@@ -240,11 +216,6 @@ func CreateAllSyncCk() bool {
 func ProcessAllSyncCk() bool {
 	logger.Log.Info("sync sql: all")
 	return ProcessSyncCk(processAllSQLs)
-}
-
-func CreateMetricAllSyncCk() bool {
-	logger.Log.Info("create metric sql: all")
-	return ProcessSyncCk(createMetricAllSQLs)
 }
 
 // Check whether ClickHouse delete operations have finished.
@@ -350,40 +321,14 @@ func RemoveOrphanPartSyncCk(startBlockHeight uint32, moveRevert bool) bool {
 	return ok
 }
 
-func RemoveOrphanMetricPartSyncCk(startBlockHeight uint32) bool {
-	logger.Log.Info("remove metric sql: part")
-	if !ProcessSyncCk(createMetricPartSQLs[:1]) {
-		return false
-	}
-	removeOrphanPartSQLsWithHeight := []string{}
-	for _, psql := range removeOrphanMetricPartSQLs {
-		removeOrphanPartSQLsWithHeight = append(removeOrphanPartSQLsWithHeight,
-			psql+strconv.Itoa(int(startBlockHeight)),
-		)
-	}
-	ok := ProcessSyncCk(removeOrphanPartSQLsWithHeight)
-	if !ok {
-		return ok
-	}
-	return CheckRemoveOrphanPartSyncCkDone(startBlockHeight, removeOrphanPartSQLsWithHeight)
-}
-
 func CreatePartSyncCk() bool {
 	// logger.Log.Info("create sql: part")
 	return ProcessSyncCk(createPartSQLs)
 }
 
-func CreateMetricPartSyncCk() bool {
-	return ProcessSyncCk(createMetricPartSQLs)
-}
-
 func ProcessPartSyncCk() bool {
 	// logger.Log.Info("sync sql: part")
 	return ProcessSyncCk(processPartSQLs)
-}
-
-func ProcessMetricPartSyncCk() bool {
-	return ProcessSyncCk(processMetricPartSQLs)
 }
 
 // ProcessRevertPartSyncCk moves revert data from staging to final table (WAL phase).

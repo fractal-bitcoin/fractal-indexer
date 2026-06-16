@@ -85,25 +85,14 @@ Common flags:
 | Flag | Description |
 |------|-------------|
 | `-full` | Fully rebuild from the genesis block. This clears Redis/Pika and initializes ClickHouse sync tables. |
-| `-start <height>` | Set the sync start height. In `metric_only -full` mode, this overrides `metrics_start_height`. |
+| `-start <height>` | Set the sync start height. |
 | `-end <height>` | Set the sync end height. This disables lag behavior. |
 | `-once` | Exit after one sync round. Useful when an external supervisor periodically starts the process. |
 | `-lag <n>` | Keep the latest `n` blocks unsynced. `-span` is a backward-compatible alias. |
 | `-nblock <n>` | Number of block IDs fetched from RPC per round. Default is 256. |
 | `-reorg` | Reorg test mode. |
 
-Metric-only full sync can rebuild the metric table from a configured height:
-
-```yaml
-index_mode: metric_only
-metrics_start_height: 800000
-```
-
-When `index_mode: metric_only`, `-full` rebuilds only `blkmetric_height` and starts at `metrics_start_height`. Passing `-start <height>` on the command line takes precedence. Business full sync still starts from genesis because UTXO and inscription state depend on earlier blocks.
-
-For a partial metric replay, run `index_mode: metric_only` without `-full` and pass `-start <height>`. The indexer deletes `blkmetric_height` rows where `height >= <height>`, reloads the boundary header from RPC, and resumes metrics from that height while preserving earlier metric rows.
-
-Metric rows include the block timestamp in `blkmetric_height.blocktime`; rebuild this table after metric schema changes.
+The indexer writes block metric rows to `blkmetric_height` by default. Metric rows include the block timestamp in `blkmetric_height.blocktime`; rebuild from genesis after metric schema changes.
 
 Environment variables:
 

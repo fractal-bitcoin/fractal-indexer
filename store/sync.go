@@ -14,7 +14,7 @@ var (
 	revertInserter *clickhouse.RowBinaryInserter
 )
 
-func prepareSyncCk(isFull, withMetric bool) bool {
+func prepareSyncCk(isFull bool) bool {
 	blkTable := "blk_height_new"
 	metricTable := "blkmetric_height_new"
 	eventTable := "blkevent_height_new"
@@ -31,12 +31,10 @@ func prepareSyncCk(isFull, withMetric bool) bool {
 	} else {
 		blkInserter.ResetForTable(blkTable)
 	}
-	if withMetric {
-		if metricInserter == nil {
-			metricInserter = clickhouse.NewRowBinaryInserter(metricTable)
-		} else {
-			metricInserter.ResetForTable(metricTable)
-		}
+	if metricInserter == nil {
+		metricInserter = clickhouse.NewRowBinaryInserter(metricTable)
+	} else {
+		metricInserter.ResetForTable(metricTable)
 	}
 	if eventInserter == nil {
 		eventInserter = clickhouse.NewRowBinaryInserter(eventTable)
@@ -52,32 +50,11 @@ func prepareSyncCk(isFull, withMetric bool) bool {
 }
 
 func PrepareFullSyncCk() bool {
-	return prepareSyncCk(true, false)
-}
-
-func PrepareFullSyncCkWithMetric() bool {
-	return prepareSyncCk(true, true)
+	return prepareSyncCk(true)
 }
 
 func PreparePartSyncCk() bool {
-	return prepareSyncCk(false, false)
-}
-
-func PreparePartSyncCkWithMetric() bool {
-	return prepareSyncCk(false, true)
-}
-
-func PrepareMetricSyncCk(isFull bool) bool {
-	metricTable := "blkmetric_height_new"
-	if isFull {
-		metricTable = "blkmetric_height"
-	}
-	if metricInserter == nil {
-		metricInserter = clickhouse.NewRowBinaryInserter(metricTable)
-	} else {
-		metricInserter.ResetForTable(metricTable)
-	}
-	return true
+	return prepareSyncCk(false)
 }
 
 // CommitRevertCk flushes only the revert inserter (WAL phase).
@@ -120,18 +97,6 @@ func CommitBusinessCk() bool {
 	)
 
 	return isOK
-}
-
-func CommitMetricCk() bool {
-	if metricInserter == nil {
-		return true
-	}
-	if err := metricInserter.Flush(); err != nil {
-		logger.Log.Error("sync-commit-blkmetric", zap.Error(err))
-		return false
-	}
-	logger.Log.Debug("metric-commit-stats", zap.Int("metric_count", metricInserter.Count()))
-	return true
 }
 
 func CommitSyncCk() bool {

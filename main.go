@@ -47,7 +47,6 @@ var (
 	endBlockHeight   uint32
 	syncLagBlocks    uint32
 	batchBlkCount    uint32
-	startFlagSet     bool
 	isFull           bool
 	syncOnce         bool
 	reorgTest        bool
@@ -61,7 +60,7 @@ func initIndexer() {
 
 	flag.BoolVar(&reorgTest, "reorg", false, "reorg 1~5 blocks random")
 	flag.BoolVar(&syncOnce, "once", false, "sync 1 block then stop")
-	flag.BoolVar(&isFull, "full", false, "rebuild from genesis, or metrics_start_height in metric_only mode")
+	flag.BoolVar(&isFull, "full", false, "start from genesis")
 	flag.UintVar(&startBlockHeightVar, "start", 0, "start block height")
 	flag.UintVar(&endBlockHeightVar, "end", 0, "end block height")
 	flag.UintVar(&syncLagBlocksVar, "lag", 0, "number of latest blocks to keep unsynced")
@@ -72,11 +71,6 @@ func initIndexer() {
 
 	startBlockHeight = uint32(startBlockHeightVar)
 	endBlockHeight = uint32(endBlockHeightVar)
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "start" {
-			startFlagSet = true
-		}
-	})
 	if endBlockHeight > 0 {
 		syncLagBlocksVar = 0
 	}
@@ -97,21 +91,6 @@ func initIndexer() {
 	}
 
 	model.SkipMissingUTXO = viper.GetBool("skip_missing_utxo")
-	model.IndexMode = viper.GetString("index_mode")
-	if model.IndexMode == "" {
-		model.IndexMode = model.IndexModeFull
-	}
-	if model.IndexMode != model.IndexModeFull && model.IndexMode != model.IndexModeMetricOnly {
-		panic(fmt.Errorf("index_mode must be set, use <%v|%v>", model.IndexModeFull, model.IndexModeMetricOnly))
-	}
-	model.MetricsEnabled = viper.GetBool("metrics_enabled")
-	if model.IsMetricOnly() {
-		model.MetricsEnabled = true
-		model.EnableWAL = false
-		if isFull && !startFlagSet {
-			startBlockHeight = viper.GetUint32("metrics_start_height")
-		}
-	}
 	if viper.IsSet("block_decode_concurrency") {
 		blockDecodeConcurrency := viper.GetInt("block_decode_concurrency")
 		if blockDecodeConcurrency < 1 {
@@ -148,7 +127,7 @@ func initIndexer() {
 }
 
 func syncBlock() {
-	if !isFull && model.ShouldIndexBusiness() {
+	if !isFull {
 		if ok := task.CheckAndRecover(); !ok {
 			triggerStop()
 			return
@@ -162,46 +141,17 @@ func syncBlock() {
 	}
 
 	if isFull {
-		if model.ShouldIndexBusiness() {
-			startBlockHeight = 0 // Start a full business rescan from genesis.
-			rdb.FlushdbInRedis() // Clear Redis.
-			if ok := store.CreateAllSyncCk(); !ok {
-				triggerStop()
-				return
-			}
-			if model.ShouldIndexMetrics() {
-				store.PrepareFullSyncCkWithMetric()
-			} else {
-				store.PrepareFullSyncCk()
-			}
-		} else {
-			if ok := store.CreateMetricAllSyncCk(); !ok {
-				triggerStop()
-				return
-			}
-			if _, err := rdb.RdbClient.HDel(ctx, constant.TASK_INFO_KEYNAME,
-				constant.TASK_METRIC_HEIGHT,
-				constant.TASK_METRIC_BLOCK,
-			).Result(); err != nil {
-				logger.Log.Error("clear metric progress failed", zap.Error(err))
-				triggerStop()
-				return
-			}
-			store.PrepareMetricSyncCk(true)
+		startBlockHeight = 0                    // Start a full rescan from genesis.
+		rdb.FlushdbInRedis()                    // Clear Redis.
+		if ok := store.CreateAllSyncCk(); !ok { // Initialize sync tables.
+			triggerStop()
+			return
 		}
+		store.PrepareFullSyncCk()
 	} else {
-		if model.ShouldIndexBusiness() {
-			// load latest blocks from ck
-			if ok := blockchain.InitLatestBlockFromDB(); !ok {
-				return
-			}
-		} else if startFlagSet && startBlockHeight > 0 {
-			// Manual metric replay reloads its boundary headers from RPC and does not
-			// require the existing metric progress marker to be valid.
-		} else {
-			if ok := blockchain.InitLatestMetricBlockFromRedis(); !ok {
-				return
-			}
+		// load latest blocks from ck
+		if ok := blockchain.InitLatestBlockFromDB(); !ok {
+			return
 		}
 	}
 
@@ -211,25 +161,8 @@ func syncBlock() {
 			break
 		}
 
-		manualMetricCommonBlockID := ""
-		if model.ShouldIndexBusiness() {
-			if _, ok := blockchain.InitLatestBlockFromRPC(batchBlkCount); !ok { // Load the latest block headers.
-				break
-			}
-		} else if isFull && startBlockHeight > 0 {
-			if _, ok := blockchain.InitMetricFullBlockFromRPC(startBlockHeight, batchBlkCount); !ok {
-				break
-			}
-		} else if startFlagSet && startBlockHeight > 0 {
-			var ok bool
-			manualMetricCommonBlockID, ok = blockchain.InitMetricReplayBlockFromRPC(startBlockHeight, batchBlkCount)
-			if !ok {
-				break
-			}
-		} else {
-			if _, ok := blockchain.InitLatestMetricBlockFromRPC(batchBlkCount); !ok {
-				break
-			}
+		if _, ok := blockchain.InitLatestBlockFromRPC(batchBlkCount); !ok { // Load the latest block headers.
+			break
 		}
 
 		if syncLagBlocks > 0 {
@@ -241,13 +174,7 @@ func syncBlock() {
 			needRemove := false
 			if startBlockHeight == 0 {
 				// Read synced blocks from ClickHouse and choose the next sync range.
-				var commonHeight, orphanCount, newBlocks uint32
-				var ok bool
-				if model.ShouldIndexBusiness() {
-					commonHeight, orphanCount, newBlocks, ok = blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
-				} else {
-					commonHeight, orphanCount, newBlocks, ok = blockchain.GetMetricSyncCommonBlockHeight(endBlockHeight)
-				}
+				commonHeight, orphanCount, newBlocks, ok := blockchain.GetBlockSyncCommonBlockHeight(endBlockHeight)
 				if !ok {
 					logger.Log.Error("reorg more than 100 blocks, or less blocks in /node/blocks/")
 					time.Sleep(time.Second * 5)
@@ -258,28 +185,16 @@ func syncBlock() {
 				}
 
 				if syncLagBlocks >= newBlocks {
-					waitHeight := commonHeight
-					if !model.ShouldIndexBusiness() && commonHeight == ^uint32(0) {
-						waitHeight = 0
-					}
-					waitUntilNewBlocksExceedLag(waitHeight, newBlocks)
+					waitUntilNewBlocksExceedLag(commonHeight, newBlocks)
 					continue
 				}
 
 				// Lagged sync keeps the latest syncLagBlocks blocks unsynced.
 				if syncLagBlocks > 0 {
-					if !model.ShouldIndexBusiness() && commonHeight == ^uint32(0) {
-						startBlockHeight = 0
-					} else {
-						startBlockHeight = commonHeight + 1 // Start from the block after COMMON_HEIGHT.
-					}
+					startBlockHeight = commonHeight + 1 // Start from the block after COMMON_HEIGHT.
 					endBlockHeight = startBlockHeight + newBlocks - syncLagBlocks
 				} else {
-					if !model.ShouldIndexBusiness() && commonHeight == ^uint32(0) {
-						startBlockHeight = 0
-					} else {
-						startBlockHeight = commonHeight + 1 // Start from the block after COMMON_HEIGHT.
-					}
+					startBlockHeight = commonHeight + 1 // Start from the block after COMMON_HEIGHT.
 				}
 
 			} else {
@@ -295,82 +210,38 @@ func syncBlock() {
 			if needRemove {
 				logger.Log.Info("need to reorg, continue.")
 
-				if startBlockHeight == 0 && model.ShouldIndexBusiness() {
+				if startBlockHeight == 0 {
 					logger.Log.Info("reorg from 0, quit.")
 					triggerStop()
 					break
 				}
 
-				if model.ShouldIndexBusiness() {
-					if ok := task.RemoveBlocksForReorg(startBlockHeight); !ok {
-						logger.Log.Info("reorg failed, quit.")
-						triggerStop()
-						break
-					}
-
-					commonBlock := blockchain.BlocksOfChainByHeight[startBlockHeight-1]
-					if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
-						constant.TASK_BLOCK, commonBlock.HashHex,
-					).Result(); err != nil {
-						logger.Log.Error("update reorg block failed", zap.Error(err))
-						triggerStop()
-						break
-					}
-					logger.Log.Info("reorg ok", zap.String("nowBlockId", commonBlock.HashHex))
-				} else {
-					commonBlockID := manualMetricCommonBlockID
-					if startBlockHeight > 0 {
-						if commonBlockID == "" {
-							commonBlock := blockchain.BlocksOfChainByHeight[startBlockHeight-1]
-							if commonBlock != nil {
-								commonBlockID = commonBlock.HashHex
-							}
-						}
-						if commonBlockID == "" {
-							logger.Log.Error("metric reorg common block header missing",
-								zap.Uint32("start", startBlockHeight),
-								zap.Uint32("commonHeight", startBlockHeight-1))
-							triggerStop()
-							break
-						}
-					}
-					if ok := task.RemoveMetricBlocksForReorg(startBlockHeight, commonBlockID); !ok {
-						logger.Log.Info("metric reorg failed, quit.")
-						triggerStop()
-						break
-					}
-					logger.Log.Info("metric reorg ok", zap.String("nowBlockId", commonBlockID))
-				}
-			}
-
-			if model.ShouldIndexBusiness() {
-				if ok := store.CreatePartSyncCk(); !ok { // Initialize partial sync tables.
+				if ok := task.RemoveBlocksForReorg(startBlockHeight); !ok {
+					logger.Log.Info("reorg failed, quit.")
 					triggerStop()
 					break
 				}
-				if model.ShouldIndexMetrics() {
-					if ok := store.CreateMetricPartSyncCk(); !ok {
-						triggerStop()
-						break
-					}
-					store.PreparePartSyncCkWithMetric()
-				} else {
-					store.PreparePartSyncCk()
-				}
-			} else {
-				if ok := store.CreateMetricPartSyncCk(); !ok {
+
+				commonBlock := blockchain.BlocksOfChainByHeight[startBlockHeight-1]
+				if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
+					constant.TASK_BLOCK, commonBlock.HashHex,
+				).Result(); err != nil {
+					logger.Log.Error("update reorg block failed", zap.Error(err))
 					triggerStop()
 					break
 				}
-				store.PrepareMetricSyncCk(false)
+				logger.Log.Info("reorg ok", zap.String("nowBlockId", commonBlock.HashHex))
 			}
+
+			if ok := store.CreatePartSyncCk(); !ok { // Initialize partial sync tables.
+				triggerStop()
+				break
+			}
+			store.PreparePartSyncCk()
 		}
 
-		var nftStartNumber, nftCursedStartNumber int64
-		if model.ShouldIndexBusiness() {
-			nftStartNumber = serial.GetNFTCountBeforeHeight(constant.ORDINALS_INSCRIPTION_COUNTS_BY_HEIGHT, startBlockHeight)
-			nftCursedStartNumber = serial.GetNFTCountBeforeHeight(constant.ORDINALS_INSCRIPTION_CURSED_COUNTS_BY_HEIGHT, startBlockHeight)
-		}
+		nftStartNumber := serial.GetNFTCountBeforeHeight(constant.ORDINALS_INSCRIPTION_COUNTS_BY_HEIGHT, startBlockHeight)
+		nftCursedStartNumber := serial.GetNFTCountBeforeHeight(constant.ORDINALS_INSCRIPTION_CURSED_COUNTS_BY_HEIGHT, startBlockHeight)
 
 		logger.Log.Debug("start", zap.Uint32("height", startBlockHeight))
 		// Scan blocks in [startBlockHeight, endBlockHeight).
@@ -395,23 +266,16 @@ func syncBlock() {
 		}
 
 		{
-			if model.ShouldIndexBusiness() {
-				if ok := task.SubmitBlocks(isFull, stageBlockHeight); !ok {
-					triggerStop()
-					break
-				}
+			if ok := task.SubmitBlocks(isFull, stageBlockHeight); !ok {
+				triggerStop()
+				break
+			}
 
-				if len(stageBlockID) == 32 {
-					if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
-						constant.TASK_BLOCK, utils.HashString(stageBlockID),
-					).Result(); err != nil {
-						logger.Log.Error("update best block failed", zap.Error(err))
-						triggerStop()
-						break
-					}
-				}
-			} else {
-				if ok := task.SubmitMetricBlocks(isFull, stageBlockHeight, stageBlockID); !ok {
+			if len(stageBlockID) == 32 {
+				if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
+					constant.TASK_BLOCK, utils.HashString(stageBlockID),
+				).Result(); err != nil {
+					logger.Log.Error("update best block failed", zap.Error(err))
 					triggerStop()
 					break
 				}

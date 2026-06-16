@@ -85,25 +85,14 @@ LISTEN=:8000 ./fractal-indexer
 | 参数 | 说明 |
 |------|------|
 | `-full` | 从创世块开始全量重建。会清空 Redis/Pika 并初始化 ClickHouse 同步表。 |
-| `-start <height>` | 指定同步起始高度。在 `metric_only -full` 模式下会覆盖 `metrics_start_height`。 |
+| `-start <height>` | 指定同步起始高度。 |
 | `-end <height>` | 指定同步结束高度。设置后会关闭 lag 行为。 |
 | `-once` | 同步一轮后退出，适合由外部 supervisor 周期拉起。 |
 | `-lag <n>` | 保留最新 `n` 个块不同步。`-span` 是兼容旧参数的别名。 |
 | `-nblock <n>` | 每轮从 RPC 拉取的 block id 数量，默认 256。 |
 | `-reorg` | reorg 测试模式。 |
 
-Metric-only 全量同步可以从配置高度开始重建指标表：
-
-```yaml
-index_mode: metric_only
-metrics_start_height: 800000
-```
-
-当 `index_mode: metric_only` 时，`-full` 只会重建 `blkmetric_height`，并从 `metrics_start_height` 开始同步。命令行传入 `-start <height>` 时优先使用命令行高度。业务全量同步仍然从创世块开始，因为 UTXO 和 inscription 状态依赖历史区块。
-
-如果只想局部重跑指标，使用 `index_mode: metric_only` 且不要加 `-full`，传入 `-start <height>`。indexer 会删除 `blkmetric_height` 中 `height >= <height>` 的行，从 RPC 重新加载边界区块头，并从该高度继续写入指标，同时保留更早的指标数据。
-
-指标行会在 `blkmetric_height.blocktime` 保存真实区块时间；指标表结构变化后需要重建该表。
+Indexer 默认写入区块指标到 `blkmetric_height`。指标行会在 `blkmetric_height.blocktime` 保存真实区块时间；指标表结构变化后需要从创世块重建。
 
 环境变量：
 

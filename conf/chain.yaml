@@ -1,8 +1,5 @@
 chain_type: Fractal
 skip_missing_utxo: false
-index_mode: full
-metrics_enabled: false
-metrics_start_height: 0
 block_decode_concurrency: 8
 
 rpc: "http://fractald:16332"

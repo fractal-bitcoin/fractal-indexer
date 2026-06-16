@@ -4,8 +4,6 @@ const (
 	TASK_INFO_KEYNAME       = "info"
 	TASK_BLOCK              = "block"
 	TASK_BLOCK_HEIGHT       = "block_height"
-	TASK_METRIC_BLOCK       = "metric_block"
-	TASK_METRIC_HEIGHT      = "metric_height"
 	TASK_REVERT_HEIGHT      = "revert_height"      // WAL: revert data committed up to this height
 	TASK_REVERT_LAST_HEIGHT = "revert_last_height" // WAL: last revert data committed up to this height, need to remove
 	TASK_NFT_POINTER        = "block_height_nft_pointer"

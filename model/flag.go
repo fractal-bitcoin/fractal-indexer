@@ -8,23 +8,4 @@ var MissingUTXO bool
 
 var EnableWAL bool = false // WAL revert data; only needed in once mode (live sync)
 
-const (
-	IndexModeFull       = "full"
-	IndexModeMetricOnly = "metric_only"
-)
-
-var IndexMode = IndexModeFull
-var MetricsEnabled bool = false
 var BlockDecodeConcurrency = 8
-
-func IsMetricOnly() bool {
-	return IndexMode == IndexModeMetricOnly
-}
-
-func ShouldIndexBusiness() bool {
-	return !IsMetricOnly()
-}
-
-func ShouldIndexMetrics() bool {
-	return MetricsEnabled || IsMetricOnly()
-}

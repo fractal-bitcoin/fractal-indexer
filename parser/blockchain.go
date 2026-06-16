@@ -1,11 +1,9 @@
 package parser
 
 import (
-	"fractal-indexer/constant"
 	"fractal-indexer/loader"
 	"fractal-indexer/logger"
 	"fractal-indexer/model"
-	"fractal-indexer/rdb"
 	"fractal-indexer/task"
 	utilsTask "fractal-indexer/task/utils"
 	"fractal-indexer/utils"
@@ -221,31 +219,27 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksReady, blocksStage chan 
 				break
 			}
 
-			if model.ShouldIndexBusiness() {
-				// Then analyze blocks serially. This can run tasks that strictly require ordered processing; blocks run serially in sequence.
-				// When serial execution reaches a block, all tasks for previous blocks and preprocessing tasks for this block have completed.
-				task.ParseBlockSerialStart(nftStartNumber, nftCursedStartNumber, block)
-				if !model.SkipMissingUTXO && model.MissingUTXO {
-					return
-				}
-				// update inscription number
-				for _, nft := range block.ParseData.NewInscriptions {
-					if nft.NFTData.IsCursed {
-						nftCursedStartNumber++
-					} else {
-						nftStartNumber++
-					}
-				}
-				block.ParseData.NftEndNumber = nftStartNumber
-				block.ParseData.NftCursedEndNumber = nftCursedStartNumber
-
-				// block speed
-				utilsTask.ParseBlockSpeed(len(block.Txs), len(model.GlobalNewUtxoDataMap), model.GlobalSpentUtxoCount,
-					len(block.ParseData.NewInscriptions), block.ParseData.NftTransferCount,
-					block.Height, maxBlockHeight)
-			} else {
-				utilsTask.ParseBlockSpeed(len(block.Txs), 0, 0, 0, 0, block.Height, maxBlockHeight)
+			// Then analyze blocks serially. This can run tasks that strictly require ordered processing; blocks run serially in sequence.
+			// When serial execution reaches a block, all tasks for previous blocks and preprocessing tasks for this block have completed.
+			task.ParseBlockSerialStart(nftStartNumber, nftCursedStartNumber, block)
+			if !model.SkipMissingUTXO && model.MissingUTXO {
+				return
 			}
+			// update inscription number
+			for _, nft := range block.ParseData.NewInscriptions {
+				if nft.NFTData.IsCursed {
+					nftCursedStartNumber++
+				} else {
+					nftStartNumber++
+				}
+			}
+			block.ParseData.NftEndNumber = nftStartNumber
+			block.ParseData.NftCursedEndNumber = nftCursedStartNumber
+
+			// block speed
+			utilsTask.ParseBlockSpeed(len(block.Txs), len(model.GlobalNewUtxoDataMap), model.GlobalSpentUtxoCount,
+				len(block.ParseData.NewInscriptions), block.ParseData.NftTransferCount,
+				block.Height, maxBlockHeight)
 
 			blocksStage <- block
 
@@ -314,30 +308,6 @@ func (bc *Blockchain) InitLatestBlockFromDB() bool {
 	return true
 }
 
-func (bc *Blockchain) InitLatestMetricBlockFromRedis() bool {
-	height, err := loader.GetInfoHeight(rdb.RdbClient, constant.TASK_METRIC_HEIGHT)
-	if err != nil {
-		logger.Log.Error("read metric height failed", zap.Error(err))
-		return false
-	}
-
-	blockID, err := loader.GetInfoStringFromRedis(constant.TASK_METRIC_BLOCK)
-	if err != nil || blockID == "" {
-		if height == 0 {
-			return true
-		}
-		logger.Log.Error("metric block missing", zap.Uint32("height", height), zap.Error(err))
-		return false
-	}
-
-	bc.Blocks[blockID] = &model.BlockIndex{
-		Height:    height,
-		HashHex:   blockID,
-		ParentHex: "",
-	}
-	return true
-}
-
 // InitLatestBlockFromRPC
 // Read the existing synced blocks from CK, then fetch the main-chain block list from the node for reorg detection.
 // Only needs to fetch 100 blocks before and after the synced height.
@@ -346,49 +316,6 @@ func (bc *Blockchain) InitLatestBlockFromRPC(batch uint32) (uint32, bool) {
 	if err != nil {
 		panic("sync check by GetBestBlockIdFromRedis, but failed.")
 	}
-	return bc.initLatestBlockFromRPCByBlockID(batch, blockIdHex)
-}
-
-func (bc *Blockchain) InitLatestMetricBlockFromRPC(batch uint32) (uint32, bool) {
-	blockIdHex, err := loader.GetInfoStringFromRedis(constant.TASK_METRIC_BLOCK)
-	if err != nil {
-		panic("metric sync check by GetInfoStringFromRedis, but failed.")
-	}
-	return bc.initLatestBlockFromRPCByBlockID(batch, blockIdHex)
-}
-
-func (bc *Blockchain) InitMetricFullBlockFromRPC(startHeight, batch uint32) (uint32, bool) {
-	return bc.initBlockRangeFromRPC(startHeight, startHeight+batch, 0, "")
-}
-
-func (bc *Blockchain) InitMetricReplayBlockFromRPC(startHeight, batch uint32) (string, bool) {
-	headerStartHeight := startHeight
-	if headerStartHeight > 0 {
-		headerStartHeight--
-	}
-	_, ok := bc.initBlockRangeFromRPC(headerStartHeight, startHeight+batch, 0, "")
-	if !ok {
-		return "", false
-	}
-	return bc.metricReplayCommonBlockID(startHeight)
-}
-
-func (bc *Blockchain) metricReplayCommonBlockID(startHeight uint32) (string, bool) {
-	if startHeight == 0 {
-		return "", true
-	}
-	commonBlock := bc.BlocksOfChainByHeight[startHeight-1]
-	if commonBlock == nil {
-		logger.Log.Error("metric replay common block header missing",
-			zap.Uint32("start", startHeight),
-			zap.Uint32("commonHeight", startHeight-1),
-			zap.Int("loadedHeaders", len(bc.BlocksOfChainByHeight)))
-		return "", false
-	}
-	return commonBlock.HashHex, true
-}
-
-func (bc *Blockchain) initLatestBlockFromRPCByBlockID(batch uint32, blockIdHex string) (uint32, bool) {
 	var heightPoint uint32 = 0
 
 	if blockIdHex != "" {
@@ -400,33 +327,18 @@ func (bc *Blockchain) initLatestBlockFromRPCByBlockID(batch uint32, blockIdHex s
 	}
 	// logger.Log.Info("load block header from rpc", zap.Uint32("height", heightPoint))
 
+	bc.BlocksOfChainById = make(map[string]struct{}, 0)
+	bc.BlocksOfChainByHeight = make(map[uint32]*model.BlockIndexInfo, 0)
+
 	var startHeight uint32 = 0
 	if heightPoint > uint32(bc.ReorgBlockByRpc) {
 		startHeight = heightPoint - uint32(bc.ReorgBlockByRpc)
 	}
 	endHeight := heightPoint + 1 + batch
-	return bc.initBlockRangeFromRPC(startHeight, endHeight, heightPoint, blockIdHex)
-}
-
-func (bc *Blockchain) initBlockRangeFromRPC(startHeight, endHeight, stopHeight uint32, stopHash string) (uint32, bool) {
-	bc.resetBlockIndexCaches()
-	blockInfos, ok := loader.GetBlockIndexRangeStandardRPC(startHeight, endHeight, stopHeight, stopHash)
+	blockInfos, ok := loader.GetBlockIndexRangeStandardRPC(startHeight, endHeight, heightPoint, blockIdHex)
 	if !ok {
-		return stopHeight, false
+		return heightPoint, false
 	}
-	bc.applyBlockIndexInfos(blockInfos)
-	return stopHeight, true
-}
-
-func (bc *Blockchain) resetBlockIndexCaches() {
-	if bc.Blocks == nil {
-		bc.Blocks = make(map[string]*model.BlockIndex)
-	}
-	bc.BlocksOfChainById = make(map[string]struct{}, 0)
-	bc.BlocksOfChainByHeight = make(map[uint32]*model.BlockIndexInfo, 0)
-}
-
-func (bc *Blockchain) applyBlockIndexInfos(blockInfos []*loader.BlockIndexInfo) {
 	var parentHex string
 	for _, blk := range blockInfos {
 		block := &model.BlockIndexInfo{
@@ -449,6 +361,7 @@ func (bc *Blockchain) applyBlockIndexInfos(blockInfos []*loader.BlockIndexInfo) 
 		}
 		parentHex = blk.HashHex
 	}
+	return heightPoint, true
 }
 
 // GetBlockSyncCommonBlockHeight gets the common block height where block sync starts.
@@ -457,51 +370,7 @@ func (bc *Blockchain) GetBlockSyncCommonBlockHeight(endBlockHeight uint32) (heig
 	if err != nil {
 		panic("sync check by GetBestBlockIdFromRedis, but failed.")
 	}
-	return bc.getSyncCommonBlockHeight(blockIdHex, endBlockHeight)
-}
 
-func (bc *Blockchain) GetMetricSyncCommonBlockHeight(endBlockHeight uint32) (heigth, orphanCount, newblock uint32, ok bool) {
-	blockIdHex, err := loader.GetInfoStringFromRedis(constant.TASK_METRIC_BLOCK)
-	if err != nil {
-		panic("metric sync check by GetInfoStringFromRedis, but failed.")
-	}
-	if blockIdHex == "" {
-		if endBlockHeight == 0 || endBlockHeight > bc.MainChainHeight+1 {
-			endBlockHeight = bc.MainChainHeight + 1
-		}
-		if endBlockHeight == 0 {
-			return ^uint32(0), 0, 0, true
-		}
-		return ^uint32(0), 0, endBlockHeight, true
-	}
-	if commonHeight, orphanCount, newBlocks, ok := bc.getSyncCommonBlockHeight(blockIdHex, endBlockHeight); ok {
-		return commonHeight, orphanCount, newBlocks, true
-	}
-
-	metricHeight, err := loader.GetInfoHeight(rdb.RdbClient, constant.TASK_METRIC_HEIGHT)
-	if err != nil {
-		logger.Log.Error("read metric height failed", zap.Error(err))
-		return 0, 0, 0, false
-	}
-	if endBlockHeight == 0 || endBlockHeight > bc.MainChainHeight+1 {
-		endBlockHeight = bc.MainChainHeight + 1
-	}
-	commonHeight := ^uint32(0)
-	syncStartHeight := uint32(0)
-	if metricHeight > uint32(bc.ReorgBlockByRpc) {
-		commonHeight = metricHeight - uint32(bc.ReorgBlockByRpc)
-		syncStartHeight = commonHeight + 1
-	}
-	newblock = endBlockHeight - syncStartHeight
-	logger.Log.Warn("metric block not in main-chain window, replaying safe range",
-		zap.String("metricBlock", blockIdHex),
-		zap.Uint32("metricHeight", metricHeight),
-		zap.Uint32("replayHeight", syncStartHeight),
-		zap.Uint32("newBlock", newblock))
-	return commonHeight, metricHeight - syncStartHeight + 1, newblock, true
-}
-
-func (bc *Blockchain) getSyncCommonBlockHeight(blockIdHex string, endBlockHeight uint32) (heigth, orphanCount, newblock uint32, ok bool) {
 	if endBlockHeight == 0 || endBlockHeight > bc.MainChainHeight+1 {
 		endBlockHeight = bc.MainChainHeight + 1
 	}
