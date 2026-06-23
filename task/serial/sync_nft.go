@@ -117,7 +117,7 @@ func SyncBlockEvent(events []*model.NewInscriptionInfo) {
 				zap.String("eventid", utils.HashString(event.TxId)),
 				zap.String("err", err.Error()),
 			)
-			model.NeedStop = true
+			model.NeedStop.Store(true)
 		}
 	}
 }
@@ -145,7 +145,7 @@ func SyncBlockNFTID(nfts []*model.NewInscriptionInfo) {
 	}
 	if _, err := pipe.Exec(ctx); err != nil {
 		logger.Log.Error("SyncBlockNFTID failed", zap.Error(err))
-		model.NeedStop = true
+		model.NeedStop.Store(true)
 	}
 }
 
@@ -159,6 +159,6 @@ func SyncBlockNFTEndNumber(key string, height uint32, nftEndNumber int64) {
 		logger.Log.Error("SyncBlockNFTEndNumber failed",
 			zap.String("err", err.Error()),
 		)
-		model.NeedStop = true
+		model.NeedStop.Store(true)
 	}
 }

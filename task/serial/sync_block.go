@@ -63,6 +63,6 @@ func SyncBlock(block *model.Block) {
 			zap.String("blkid", block.HashHex),
 			zap.String("err", err.Error()),
 		)
-		model.NeedStop = true
+		model.NeedStop.Store(true)
 	}
 }

@@ -117,6 +117,7 @@ func initIndexer() {
 func syncBlock() {
 	if !isFull {
 		if ok := task.CheckAndRecover(); !ok {
+			triggerStop()
 			return
 		}
 	}
@@ -128,9 +129,12 @@ func syncBlock() {
 	}
 
 	if isFull {
-		startBlockHeight = 0    // Start a full rescan from genesis.
-		rdb.FlushdbInRedis()    // Clear Redis.
-		store.CreateAllSyncCk() // Initialize sync tables.
+		startBlockHeight = 0                    // Start a full rescan from genesis.
+		rdb.FlushdbInRedis()                    // Clear Redis.
+		if ok := store.CreateAllSyncCk(); !ok { // Initialize sync tables.
+			triggerStop()
+			return
+		}
 		store.PrepareFullSyncCk()
 	} else {
 		// load latest blocks from ck
@@ -141,7 +145,7 @@ func syncBlock() {
 
 	// Scan blocks.
 	for {
-		if model.NeedStop { // Stop when shutdown was requested.
+		if model.NeedStop.Load() { // Stop when shutdown was requested.
 			break
 		}
 
@@ -207,13 +211,20 @@ func syncBlock() {
 				}
 
 				commonBlock := blockchain.BlocksOfChainByHeight[startBlockHeight-1]
-				rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
+				if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
 					constant.TASK_BLOCK, commonBlock.HashHex,
-				)
+				).Result(); err != nil {
+					logger.Log.Error("update reorg block failed", zap.Error(err))
+					triggerStop()
+					break
+				}
 				logger.Log.Info("reorg ok", zap.String("nowBlockId", commonBlock.HashHex))
 			}
 
-			store.CreatePartSyncCk() // Initialize partial sync tables.
+			if ok := store.CreatePartSyncCk(); !ok { // Initialize partial sync tables.
+				triggerStop()
+				break
+			}
 			store.PreparePartSyncCk()
 		}
 
@@ -226,7 +237,7 @@ func syncBlock() {
 		if !model.SkipMissingUTXO && model.MissingUTXO {
 			break
 		}
-		if model.NeedStop { // Stop when shutdown or an error requested it.
+		if model.NeedStop.Load() { // Stop when shutdown or an error requested it.
 			break
 		}
 
@@ -243,12 +254,19 @@ func syncBlock() {
 		}
 
 		{
-			task.SubmitBlocks(isFull, stageBlockHeight)
+			if ok := task.SubmitBlocks(isFull, stageBlockHeight); !ok {
+				triggerStop()
+				break
+			}
 
 			if len(stageBlockID) == 32 {
-				rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
+				if _, err := rdb.RdbClient.HSet(ctx, constant.TASK_INFO_KEYNAME,
 					constant.TASK_BLOCK, utils.HashString(stageBlockID),
-				)
+				).Result(); err != nil {
+					logger.Log.Error("update best block failed", zap.Error(err))
+					triggerStop()
+					break
+				}
 			}
 			isFull = false // Prepare for incremental sync.
 			startBlockHeight = 0
@@ -278,7 +296,7 @@ func waitUntilNewBlocksExceedLag(commonHeight, newBlocks uint32) {
 	// Wait until the actual RPC tip has more blocks after the common block
 	// than the configured sync lag.
 	for {
-		if model.NeedStop {
+		if model.NeedStop.Load() {
 			break
 		}
 
@@ -367,7 +385,7 @@ func main() {
 	}
 
 	////////////////
-	if model.NeedStop {
+	if model.NeedStop.Load() {
 		os.Exit(1)
 	}
 }
@@ -393,5 +411,5 @@ func isAPIArg(args []string) bool {
 
 func triggerStop() {
 	logger.Log.Info("program exit...")
-	model.NeedStop = true
+	model.NeedStop.Store(true)
 }

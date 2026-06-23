@@ -1,6 +1,8 @@
 package model
 
-var NeedStop bool
+import "sync/atomic"
+
+var NeedStop atomic.Bool
 var SkipMissingUTXO bool = false
 var MissingUTXO bool
 

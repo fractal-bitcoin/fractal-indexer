@@ -67,7 +67,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksReady chan *model.Bloc
 
 	parseBlock := func(blockInfo *model.BlockIndexInfo) bool {
 		blockLimit <- struct{}{}
-		if model.NeedStop || stopped.Load() {
+		if model.NeedStop.Load() || stopped.Load() {
 			<-blockLimit
 			return false
 		}
@@ -79,7 +79,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksReady chan *model.Bloc
 				<-blockLimit
 			}()
 
-			if model.NeedStop {
+			if model.NeedStop.Load() {
 				return
 			}
 
@@ -153,7 +153,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksReady chan *model.Bloc
 			// First analyze blocks in parallel. This can run independent preprocessing tasks within each block; different blocks run in parallel and out of order.
 			task.ParseBlockParallel(block)
 
-			if model.NeedStop {
+			if model.NeedStop.Load() {
 				loader.PutRawBlock(block.RawBlockBuf)
 				return
 			}
@@ -165,7 +165,7 @@ func (bc *Blockchain) InitLongestChainBlockByHeader(blocksReady chan *model.Bloc
 	}
 
 	for nextBlockHeight := startBlockHeight; nextBlockHeight < endBlockHeight; nextBlockHeight++ {
-		if model.NeedStop || stopped.Load() {
+		if model.NeedStop.Load() || stopped.Load() {
 			break
 		}
 
@@ -253,7 +253,7 @@ func (bc *Blockchain) ParseLongestChainBlockStart(blocksReady, blocksStage chan 
 			break
 		}
 	}
-	if nextBlockHeight < maxBlockHeight && !model.NeedStop && !model.MissingUTXO {
+	if nextBlockHeight < maxBlockHeight && !model.NeedStop.Load() && !model.MissingUTXO {
 		logger.Log.Warn("block parse pipeline stopped before next sequential block",
 			zap.Uint32("nextHeight", nextBlockHeight),
 			zap.Uint32("start", startBlockHeight),
