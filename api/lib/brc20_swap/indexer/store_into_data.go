@@ -72,6 +72,17 @@ func GetHistoryDataRdbKey(idx int) string {
 	return fmt.Sprintf("h%v", idx)
 }
 
+const (
+	brc20SwapHistoryWithdrawDataLegacyGobName = "github.com/unisat-wallet/libbrc20-indexer/model.BRC20SwapHistoryWithdrawData"
+	brc20SwapHistoryCommitDataLegacyGobName   = "github.com/unisat-wallet/libbrc20-indexer/model.BRC20SwapHistoryCommitData"
+)
+
+func registerBRC20ModuleStoreGobTypes() {
+	// Keep interface names stable for snapshots created before brc20 stopped using an independent module.
+	gob.RegisterName(brc20SwapHistoryWithdrawDataLegacyGobName, model.BRC20SwapHistoryWithdrawData{})
+	gob.RegisterName(brc20SwapHistoryCommitDataLegacyGobName, model.BRC20SwapHistoryCommitData{})
+}
+
 // base
 func (g *BRC20ModuleIndexer) Load(fname string) {
 	log.Printf("loading brc20 ...")
@@ -81,8 +92,7 @@ func (g *BRC20ModuleIndexer) Load(fname string) {
 		return
 	}
 
-	gob.Register(model.BRC20SwapHistoryWithdrawData{})
-	gob.Register(model.BRC20SwapHistoryCommitData{})
+	registerBRC20ModuleStoreGobTypes()
 	gobDec := gob.NewDecoder(gobFile)
 
 	store := &BRC20ModuleIndexerStore{}
@@ -106,8 +116,7 @@ func (g *BRC20ModuleIndexer) Save(fname string) {
 	}
 	defer gobFile.Close()
 
-	gob.Register(model.BRC20SwapHistoryWithdrawData{})
-	gob.Register(model.BRC20SwapHistoryCommitData{})
+	registerBRC20ModuleStoreGobTypes()
 	enc := gob.NewEncoder(gobFile)
 	if err := enc.Encode(g.GetStore()); err != nil {
 		log.Printf("save store failed: %s", err)
